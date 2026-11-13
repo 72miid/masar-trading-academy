@@ -43,6 +43,9 @@ assert.ok(supabaseConfig.includes("verify_jwt = false"),"signed payment webhook 
 const manifest=JSON.parse(readFileSync(new URL("../manifest.webmanifest",import.meta.url),"utf8"));
 assert.equal(manifest.start_url,"./");
 const publicIndex=readFileSync(new URL("../index.html",import.meta.url),"utf8");
+assert.ok(publicIndex.includes('disabled=currentUnit===units.length-1||!state.completed.includes(currentUnit)'),"next unit button stays locked until current unit is completed");
+assert.ok(publicIndex.includes('function nextUnit(){if(!state.completed.includes(currentUnit))'),"nextUnit handler blocks progression before passing");
+assert.ok(publicIndex.includes("لا يمكنك الانتقال قبل اجتياز اختبار الوحدة بنتيجة 4/5 على الأقل."),"blocked progression explains the 4/5 pass requirement");
 assert.ok(!existsSync(new URL("../supabase/functions/masar-content/index.ts",import.meta.url)),"protected curriculum source must not exist in public repository");
 for(const marker of ["مقدمة الأسواق المالية","تربط الأسواق بين المشاركين الذين يرغبون في شراء الأصول وبيعها","ما المقصود بالسيولة؟","XAU/USD يعرض سعر أونصة الذهب","مفهوم السيولة"])assert.ok(!publicIndex.includes(marker),"protected course content leaked in public HTML: "+marker);
 assert.ok(publicIndex.includes("masar-content"),"protected content loader missing");
