@@ -14,6 +14,15 @@ assert.equal(api.requiresTradePlan("trade"), true, "trade decisions require a pl
 assert.equal(api.requiresTradePlan("wait"), false, "wait decisions do not require a plan");
 assert.equal(api.requiresTradePlan("skip"), false, "skip decisions do not require a plan");
 
+for (let i = 0; i < 6; i++) {
+  const validBars = api.scenarioBars(i, 0);
+  const falseBars = api.scenarioBars(i, 1);
+  assert.ok(validBars[23].c > validBars[22].c, `valid scenario ${i + 1} shows a bullish confirmation candle before the decision`);
+  assert.ok(falseBars[23].c < falseBars[22].c, `failed scenario ${i + 1} shows visible bearish failure before the decision`);
+  const rangeBars = api.scenarioBars(i, 2);
+  assert.ok(Math.abs(rangeBars[23].c - rangeBars[0].c) < 0.25, `range scenario ${i + 1} does not imply a directional trend`);
+}
+
 const completeLong = {
   side: "buy", entry: 100, stop: 98, target: 104, size: 2,
   reason: "ارتداد مؤكد من منطقة دعم بعد إغلاق شمعة رفض",
