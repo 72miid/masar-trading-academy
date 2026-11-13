@@ -54,7 +54,7 @@ assert.equal(missingInvalidation.valid, false, "requires an explicit invalidatio
 
 const weakRR = api.evaluateTradePlan({ ...completeLong, target: 100.5 });
 assert.equal(weakRR.valid, true, "keeps a geometrically valid low-RR plan reviewable");
-assert.ok(weakRR.warnings.some(x => /أقل من 1/.test(x)), "warns when reward is below risk");
+assert.ok(weakRR.warnings.some(x => /أقل من مسافة المخاطرة/.test(x)), "warns when reward is below risk");
 
 const distantEntry = api.evaluateTradePlan({ ...completeLong, entry: 104 });
 assert.equal(distantEntry.valid, false, "rejects an entry price too far from the decision reference");
