@@ -3,7 +3,7 @@ import vm from "node:vm";
 import assert from "node:assert/strict";
 
 const source = readFileSync(new URL("../assets/masar-strategy-sim.js", import.meta.url), "utf8");
-const window = {};
+const window = { __MASAR_STRATEGY_SIM_TEST__: true };
 const document = { readyState: "loading", addEventListener() {} };
 const localStorage = { getItem() { return null; }, setItem() {} };
 vm.runInNewContext(source, { window, document, localStorage, Date, Math, JSON, String, Number, Object, Array }, { timeout: 2000 });
