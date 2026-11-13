@@ -25,4 +25,30 @@ assert.equal(merged.masar_paper_v1.find(x=>x.id==="t1").status,"closed","local u
 assert.equal(merged.masar_strategy_replay_v1.s0.score,90,"newer strategy replay attempt wins");
 assert.equal(merged.masar_ex_0,"ملاحظة سابقة","non-empty saved exercise is not overwritten by empty state");
 assert.equal(merged.masar_ex_1,"ملاحظة جديدة","new exercise note is retained");
+
+class LiveStorage { constructor(){this.data={}} get length(){return Object.keys(this.data).length} key(i){return Object.keys(this.data)[i]??null} getItem(k){return Object.prototype.hasOwnProperty.call(this.data,k)?this.data[k]:null} setItem(k,v){this.data[k]=String(v)} removeItem(k){delete this.data[k]} }
+const timers=[];
+const liveStorage=new LiveStorage();
+liveStorage.setItem("masar_local_owner","learner-a");
+liveStorage.setItem("masar_v2",JSON.stringify({completed:[1],scores:{1:5},finalScore:null,journal:[]}));
+let remoteProgress={masar_v2:{completed:[0],scores:{0:4},finalScore:8,journal:[]}};
+const appNode={firstChild:null,insertBefore(node){this.status=node}};
+const liveWindow={localStorage:liveStorage,MASAR_CONFIG:{supabaseUrl:"https://example.supabase.co",supabaseAnonKey:"public-anon-key"}};
+const liveDocument={getElementById(id){return id==="academyApp"?appNode:null},createElement(){return {style:{},setAttribute(){},textContent:""}}};
+async function fakeFetch(url,options={}){
+ if(url.endsWith("/auth/v1/user"))return {ok:true,json:async()=>({id:"learner-a"})};
+ if(url.includes("/rest/v1/user_progress")&&(!options.method||options.method==="GET"))return {ok:true,json:async()=>[{progress:remoteProgress}]};
+ if(url.includes("/rest/v1/user_progress")&&options.method==="POST"){remoteProgress=JSON.parse(options.body).progress;return {ok:true,text:async()=>""}};
+ throw new Error("Unexpected URL in progress sync QA: "+url);
+}
+vm.runInNewContext(source,{window:liveWindow,Storage:LiveStorage,localStorage:liveStorage,document:liveDocument,fetch:fakeFetch,TextEncoder,JSON,Date,Set,Object,Array,String,Number,Math,RegExp,setTimeout(fn){timers.push(fn);return timers.length},clearTimeout(){}});
+await liveWindow.MASARProgressSync.initialize("learner-token");
+assert.deepEqual(Array.from(remoteProgress.masar_v2.completed).sort(),[0,1],"initialization uploads a merged local/cloud learning history");
+assert.equal(remoteProgress.masar_v2.scores[0],4,"cloud quiz score survives initial sync");
+assert.equal(remoteProgress.masar_v2.scores[1],5,"local quiz score is uploaded");
+liveStorage.setItem("masar_ex_0","ملاحظة تدريبية");
+await liveWindow.MASARProgressSync.flush();
+assert.equal(remoteProgress.masar_ex_0,"ملاحظة تدريبية","later local changes are uploaded through the Storage hook");
+assert.equal(liveWindow.MASARProgressSync.getStatus().ready,true,"cloud sync is marked ready after authentication");
+
 console.log("MASAR progress sync QA passed: account-scoped key allowlist, cross-device merge, course scores, journal, paper trades, strategy replay, and exercise notes.");
