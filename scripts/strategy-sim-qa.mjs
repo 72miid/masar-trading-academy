@@ -52,6 +52,14 @@ assert.equal(missingReason.valid, false, "requires a meaningful entry rationale"
 const missingInvalidation = api.evaluateTradePlan({ ...completeLong, cancel: "" });
 assert.equal(missingInvalidation.valid, false, "requires an explicit invalidation condition");
 
+const vagueReason = api.evaluateTradePlan({ ...completeLong, reason: "أعتقد أن السعر سيصعد بقوة" });
+assert.equal(vagueReason.valid, false, "requires a technical signal in the entry rationale");
+assert.ok(vagueReason.errors.some(x => /إشارة فنية محددة/.test(x)), "explains what a useful rationale must identify");
+
+const vagueCancel = api.evaluateTradePlan({ ...completeLong, cancel: "إذا تغير رأيي لاحقاً" });
+assert.equal(vagueCancel.valid, false, "requires an observable invalidation condition");
+assert.ok(vagueCancel.errors.some(x => /شرط إلغاء قابل للملاحظة/.test(x)), "explains that invalidation must be observable");
+
 const weakRR = api.evaluateTradePlan({ ...completeLong, target: 100.5 });
 assert.equal(weakRR.valid, true, "keeps a geometrically valid low-RR plan reviewable");
 assert.ok(weakRR.warnings.some(x => /أقل من مسافة المخاطرة/.test(x)), "warns when reward is below risk");
