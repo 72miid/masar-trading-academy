@@ -67,9 +67,9 @@ vm.runInNewContext(lab,{window:testWindow,document:testDocument,localStorage:tes
 const engine=testWindow.__MASAR_TEST_API__;
 assert.ok(engine,"backtest test API is exposed only in the QA harness");
 const csvRows=["time,open,high,low,close",...Array.from({length:100},(_,i)=>{const d=new Date(Date.UTC(2025,0,1+i)).toISOString();return '"'+d+'",10,11,9,10.5'})];
-assert.equal(engine.csvParse(csvRows.join("\\n")).length,100,"CSV parser accepts 100 valid OHLC candles and quoted timestamps");
-assert.throws(()=>engine.csvParse(["time,open,high,low,close",...csvRows.slice(1)].join("\\n").replace("2025-01-02","2024-12-31")),/تصاعدياً/,"CSV parser rejects out-of-order candles");
-assert.throws(()=>engine.csvParse(csvRows.join("\\n").replace("2025-01-02","2025-01-01")),/دون تكرار/,"CSV parser rejects duplicate timestamps");
+assert.equal(engine.csvParse(csvRows.join("\n")).length,100,"CSV parser accepts 100 valid OHLC candles and quoted timestamps");
+assert.throws(()=>engine.csvParse(["time,open,high,low,close",...csvRows.slice(1)].join("\n").replace("2025-01-02","2024-12-31")),/تصاعدياً/,"CSV parser rejects out-of-order candles");
+assert.throws(()=>engine.csvParse(csvRows.join("\n").replace("2025-01-02","2025-01-01")),/دون تكرار/,"CSV parser rejects duplicate timestamps");
 const base=Array.from({length:8},(_,i)=>({time:"2025-01-"+String(i+1).padStart(2,"0"),open:9,high:10,low:8,close:9}));
 base[5]={time:"2025-01-06",open:9,high:12,low:9,close:11};
 base[6]={time:"2025-01-07",open:10,high:11,low:9,close:10};
