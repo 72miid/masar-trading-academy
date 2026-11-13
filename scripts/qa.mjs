@@ -11,6 +11,16 @@ assert.equal(ids.length,new Set(ids).size,"HTML IDs must be unique");
 for(const token of ['data-view="simulator"','id="simulatorView"','function openPaperTrade()','function closePaperTrade()','function paperMetrics()','function runMasarCoach()','function exportMasarBackup()','async function importMasarBackup(ev)','masar_paper_v1','masar_marketlab_v1','manifest.webmanifest','serviceWorker.register']){
 assert.ok(html.includes(token),"required feature missing: "+token);
 }
+assert.ok(html.includes('src="./assets/masar-progress-sync.js"'),"learner progress sync script is loaded");
+assert.ok(html.includes("MASARProgressSync.initialize(session.access_token)"),"academy initializes account-scoped cloud progress");
+assert.ok(html.includes("masarReloadProgressFromStorage"),"academy reloads state after cloud restoration");
+const progressSync=readFileSync(new URL("../assets/masar-progress-sync.js",import.meta.url),"utf8");
+new vm.Script(progressSync,{filename:"masar-progress-sync.js"});
+assert.ok(!/SUPABASE_SERVICE_ROLE_KEY|service_role|sb_secret_/i.test(progressSync),"browser progress sync contains no privileged Supabase secret");
+for(const token of ["user_progress","resolution=merge-duplicates","auth/v1/user","masar_local_owner","masar_strategy_replay_v1","masar_practice_v1"])assert.ok(progressSync.includes(token),"progress sync missing: "+token);
+const progressMigration=readFileSync(new URL("../supabase/migrations/202611140001_user_progress.sql",import.meta.url),"utf8");
+for(const token of ["public.user_progress","references auth.users(id) on delete cascade","enable row level security","user_progress_select_own","user_progress_insert_own","user_progress_update_own","grant select, insert, update","pg_column_size(progress) <= 1048576"])assert.ok(progressMigration.includes(token),"progress migration missing: "+token);
+assert.ok(!/create table public\.(?:subscriptions|payment_webhook_events)|payment_webhook_events/i.test(progressMigration),"progress migration must not modify payment tables");
 const account=readFileSync(new URL("../account.html",import.meta.url),"utf8");
 for(const token of ["loginBtn","logoutBtn","subscriptions?select=status","sessionStorage","supabaseAnonKey","app_metadata","masar-change-password","must_change_password","changePasswordPanel","savePasswordBtn","confirmPassword","ensureLocalOwner","masar_local_owner"])assert.ok(account.includes(token),"account integration missing: "+token);
 const admin=readFileSync(new URL("../admin.html",import.meta.url),"utf8");
