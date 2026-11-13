@@ -15,7 +15,7 @@ const quizzes=[
 [["هل يوجد هدف ربح أو عدد صفقات مطلوب؟",["نعم","لا، الهدف فهم المنصة","التداول يومياً"],1],["ما الترتيب الأفضل للتطبيق؟",["إرسال الأمر فوراً","فحص الأداة ثم التخطيط ثم التجربة والمراجعة","اختيار أكبر حجم"],1]]
 ];
 let course=null,device="auto",current=0,answers={};
-const detect=()=>/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)?"mobile":"desktop";
+const detect=()=>/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1)?"mobile":"desktop";
 const progress=()=>{try{return JSON.parse(localStorage.getItem("masar_mt5_progress_v1")||"{}")}catch{return {}}};
 const save=p=>localStorage.setItem("masar_mt5_progress_v1",JSON.stringify(p));
 const activeDevice=()=>device==="auto"?detect():device;
