@@ -44,8 +44,10 @@ Deno.serve(async(req)=>{
  if(body.action==="create_user"){
   const email=String(body.email||"").trim().toLowerCase(),days=Number(body.days);
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!Number.isInteger(days)||days<1||days>3650)return out({error:"invalid_input"},400);
-  const bytes=new Uint8Array(8);crypto.getRandomValues(bytes);
-  const tempPassword=Array.from(bytes,b=>String(b%10)).join("");
+  const pick=(chars:string)=>chars[crypto.getRandomValues(new Uint32Array(1))[0]%chars.length];
+  const chars=[...Array.from({length:5},()=>pick("abcdefghijkmnopqrstuvwxyz")),...Array.from({length:5},()=>pick("ABCDEFGHJKLMNPQRSTUVWXYZ")),...Array.from({length:6},()=>pick("23456789"))];
+  for(let i=chars.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[chars[i],chars[j]]=[chars[j],chars[i]];}
+  const tempPassword=chars.join("");
   const {data,error}=await db.auth.admin.createUser({email,password:tempPassword,email_confirm:true,app_metadata:{must_change_password:true}});
   if(error||!data.user)return out({error:error?.message||"user_creation_failed"},400);
   const end=new Date(Date.now()+days*86400000).toISOString();
