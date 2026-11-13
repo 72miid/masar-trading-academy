@@ -24,6 +24,8 @@ jobs:
           node-version: 22
       - name: Run static and structural QA
         run: node scripts/qa.mjs
+      - name: Run strategy simulator QA
+        run: node scripts/strategy-sim-qa.mjs
   deploy:
     if: github.event_name != 'pull_request'
     needs: test
