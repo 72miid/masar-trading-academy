@@ -12,7 +12,7 @@ const rawValue=(key,value)=>EXERCISE.test(key)?String(value??""):JSON.stringify(
 function localSnapshot(){const out={};for(let i=0;i<storage.length;i++){const key=storage.key(i);if(!isKey(key))continue;const value=parseRaw(key,storage.getItem(key));if(value!==undefined)out[key]=value}return out}
 function uniqueArray(a,b){const out=[],seen=new Set();for(const item of [...(Array.isArray(a)?a:[]),...(Array.isArray(b)?b:[])]){const k=JSON.stringify(item);if(!seen.has(k)){seen.add(k);out.push(item)}}return out}
 function mergeObject(remote,local){if(Array.isArray(remote)||Array.isArray(local))return uniqueArray(remote,local);if(remote&&typeof remote==="object"&&local&&typeof local==="object"){const out={...remote};for(const k of Object.keys(local))out[k]=k in out?mergeObject(out[k],local[k]):local[k];return out}return local===undefined?remote:local}
-function mergeById(remote,local){const out=[],positions=new Map();for(const item of [...(Array.isArray(remote)?remote:[]),...(Array.isArray(local)?local:[])]){const id=item&&item.id;if(id===undefined||id===null){out.push(item);continue}if(positions.has(id)){out[positions.get(id)]=item}else{positions.set(id,out.length);out.push(item)}}return out.slice(-500)}
+function mergeById(remote,local){const out=[],positions=new Map(),seen=new Set();for(const item of [...(Array.isArray(remote)?remote:[]),...(Array.isArray(local)?local:[])]){const id=item&&item.id;if(id===undefined||id===null){const signature=JSON.stringify(item);if(!seen.has(signature)){seen.add(signature);out.push(item)}continue}if(positions.has(id)){out[positions.get(id)]=item}else{positions.set(id,out.length);out.push(item)}}return out.slice(-500)}
 function mergeReplay(remote,local){const out={...(remote&&typeof remote==="object"?remote:{})};for(const [key,value] of Object.entries(local&&typeof local==="object"?local:{})){const old=out[key];if(!old||Date.parse(value?.at||0)>=Date.parse(old?.at||0))out[key]=value}return out}
 function mergeProgress(remote,local){
  const out={...(remote&&typeof remote==="object"?remote:{})};
@@ -20,9 +20,10 @@ function mergeProgress(remote,local){
   if(key==="masar_v2"){
    const r=out[key]&&typeof out[key]==="object"?out[key]:{};
    const l=value&&typeof value==="object"?value:{};
-   out[key]={...r,...l,completed:[...new Set([...(Array.isArray(r.completed)?r.completed:[]),...(Array.isArray(l.completed)?l.completed:[])])],scores:{...(r.scores||{}),...(l.scores||{})},journal:mergeById(r.journal,l.journal)};
-   for(let i=0;i<10;i++){const a=Number(r.scores?.[i]),b=Number(l.scores?.[i]);if(Number.isFinite(a)&&Number.isFinite(b))out[key].scores[i]=Math.max(a,b)}
-   if(Number.isFinite(r.finalScore)&&Number.isFinite(l.finalScore))out[key].finalScore=Math.max(r.finalScore,l.finalScore);
+   const scores={...(r.scores||{}),...(l.scores||{})};
+   for(let i=0;i<10;i++){const a=Number(r.scores?.[i]),b=Number(l.scores?.[i]);if(Number.isFinite(a)&&Number.isFinite(b))scores[i]=Math.max(a,b);else if(Number.isFinite(a))scores[i]=a;else if(Number.isFinite(b))scores[i]=b}
+   const rf=Number(r.finalScore),lf=Number(l.finalScore),finalScore=Number.isFinite(rf)&&Number.isFinite(lf)?Math.max(rf,lf):Number.isFinite(rf)?rf:Number.isFinite(lf)?lf:null;
+   out[key]={...r,...l,completed:[...new Set([...(Array.isArray(r.completed)?r.completed:[]),...(Array.isArray(l.completed)?l.completed:[])])],scores,finalScore,journal:mergeById(r.journal,l.journal)};
   }else if(key==="masar_paper_v1")out[key]=mergeById(out[key],value);
   else if(key==="masar_strategy_replay_v1")out[key]=mergeReplay(out[key],value);
   else if(key==="masar_marketlab_v1"||key==="masar_practice_v1")out[key]=mergeObject(out[key],value);
