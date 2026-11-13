@@ -17,15 +17,15 @@ function pathFor(){
  for(let i=0;i<34;i++){
   let d=0;
   if(idx===0){ // support / resistance
-   d=k==="valid"?(i<9?.08:i<16?-.09:i<22?-.025:i<27?.02:.12):k==="false"?(i<9?.08:i<17?-.1:i<22?-.05:i<27?-.18:-.12):wave(i,.07);
+   d=k==="valid"?(i<9?.08:i<16?-.09:i<22?-.025:i<23?.02:.12):k==="false"?(i<9?.08:i<17?-.1:i<22?-.05:i<27?-.18:-.12):wave(i,.07);
   }else if(idx===1){ // breakout / retest
-   d=k==="valid"?(i<15?wave(i,.035):i<21?.20:i<26?-.11:.18):k==="false"?(i<15?wave(i,.035):i<21?.24:i<26?-.28:-.09):wave(i,.045);
+   d=k==="valid"?(i<15?wave(i,.035):i<21?.20:i<23?-.11:.18):k==="false"?(i<15?wave(i,.035):i<21?.24:i<26?-.28:-.09):wave(i,.045);
   }else if(idx===2){ // trend
    d=k==="valid"?(i<10?.16:i<17?.06:i<23?-.10:.18):k==="false"?(i<10?.16:i<17?.06:i<23?-.10:-.22):wave(i,.075);
   }else if(idx===3){ // moving average pullback
-   d=k==="valid"?(i<12?.14:i<19?-.12:i<24?-.02:.17):k==="false"?(i<12?.14:i<19?-.12:i<24?-.18:-.15):wave(i,.06);
+   d=k==="valid"?(i<12?.14:i<19?-.12:i<23?-.02:.17):k==="false"?(i<12?.14:i<19?-.12:i<24?-.18:-.15):wave(i,.06);
   }else if(idx===4){ // momentum indicators
-   d=k==="valid"?(i<12?.015:i<19?.025:i<24?.12:.17):k==="false"?(i<12?.02:i<19?.025:i<24?.18:i<29?-.24:-.16):wave(i,.035);
+   d=k==="valid"?(i<12?.015:i<19?.025:i<24?.12:.17):k==="false"?(i<12?.02:i<19?.025:i<21?.18:i<24?-.14:-.24):wave(i,.035);
   }else{ // candlestick / range
    d=k==="valid"?(i<12?wave(i,.08):i<19?-.045:i<23?-.02:.16):k==="false"?(i<12?wave(i,.08):i<19?-.045:i<23?-.02:-.18):wave(i,.11);
   }
@@ -152,7 +152,7 @@ window.openStrategyReplay=function(id){
  reset();if(typeof window.showView==="function")window.showView("simulator");
  setTimeout(()=>{const panel=$("strategyReplay");if(panel)panel.scrollIntoView({behavior:"smooth",block:"start"})},80);
 };
-if(window.__MASAR_STRATEGY_SIM_TEST__){window.__MASAR_STRATEGY_SIM_TEST__={requiresTradePlan,evaluateTradePlan}}
+if(window.__MASAR_STRATEGY_SIM_TEST__){window.__MASAR_STRATEGY_SIM_TEST__={requiresTradePlan,evaluateTradePlan,scenarioBars(strategyIndex,scenarioIndex){const previous={selected,caseIndex,caseData};selected=strategyIndex;caseIndex=scenarioIndex;caseData=cases[scenarioIndex];const bars=pathFor();selected=previous.selected;caseIndex=previous.caseIndex;caseData=previous.caseData;return bars}}}
 function init(){
  mount();const old=window.masarInitialize;
  if(typeof old==="function"&&!window.__strategyReplayWrapped){
