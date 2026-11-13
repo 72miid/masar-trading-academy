@@ -56,7 +56,7 @@ for(const token of ["auth.getUser","app_metadata","updateUserById","password.len
 const app=readFileSync(new URL("../index.html",import.meta.url),"utf8");
 for(const token of ["masar-access-check","academyApp","accessGate","sessionStorage"])assert.ok(app.includes(token),"academy access gate missing: "+token);
 const sw=readFileSync(new URL("../sw.js",import.meta.url),"utf8");
-assert.ok(sw.includes("masar-shell-v9"),"service worker cache version is current");
+assert.ok(sw.includes("masar-shell-v10"),"service worker cache version is current");
 assert.ok(sw.includes("assets/curriculum-lab.js"),"practical lab is precached");
 const lab=readFileSync(new URL("../assets/curriculum-lab.js",import.meta.url),"utf8");
 new vm.Script(lab,{filename:"curriculum-lab.js"});
@@ -79,6 +79,9 @@ const gapStop=engine.run(base,0,8,rules).trades[0];
 assert.equal(gapStop.why,"فجوة عبر الوقف","gap-through stop is filled at the opening price");
 assert.equal(gapStop.exit,7.5,"long stop gap receives the adverse opening fill");
 assert.equal(gapStop.net,-2.5,"gap stop P&L uses actual modeled fill");
+const invalidated=base.slice(0,7).map(x=>({...x}));
+invalidated[6]={time:"2025-01-07",open:7.5,high:8,low:7,close:7.8};
+assert.equal(engine.run(invalidated,0,7,rules).count,0,"skip a long entry when the next open has already crossed its stop");
 const both=base.slice(0,7).map(x=>({...x}));
 both[6]={time:"2025-01-07",open:10,high:14,low:7,close:10};
 const sameBar=engine.run(both,0,7,rules).trades[0];
