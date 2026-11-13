@@ -41,6 +41,26 @@ Deno.serve(async(req)=>{
   if(error)return out({error:"update_failed"},500);
   return out({updated:true,active:true,current_period_end:end});
  }
+ if(body.action==="reset_password"){
+  const userId=String(body.user_id||"");
+  if(!/^[0-9a-f-]{36}$/i.test(userId))return out({error:"invalid_input"},400);
+  const {data:userData,error:userError}=await db.auth.admin.getUserById(userId);
+  if(userError||!userData.user)return out({error:"user_not_found"},404);
+  const {data:adminTarget,error:adminTargetError}=await db.from("admin_users").select("user_id").eq("user_id",userId).maybeSingle();
+  if(adminTargetError)return out({error:"target_check_failed"},500);
+  if(adminTarget)return out({error:"cannot_reset_admin"},403);
+  const {data:subscription,error:subscriptionError}=await db.from("subscriptions").select("user_id").eq("user_id",userId).eq("provider","manual").maybeSingle();
+  if(subscriptionError)return out({error:"subscription_check_failed"},500);
+  if(!subscription)return out({error:"manual_subscriber_only"},403);
+  const pick=(chars:string)=>chars[crypto.getRandomValues(new Uint32Array(1))[0]%chars.length];
+  const chars=[...Array.from({length:5},()=>pick("abcdefghijkmnopqrstuvwxyz")),...Array.from({length:5},()=>pick("ABCDEFGHJKLMNPQRSTUVWXYZ")),...Array.from({length:6},()=>pick("23456789"))];
+  for(let i=chars.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[chars[i],chars[j]]=[chars[j],chars[i]];}
+  const tempPassword=chars.join("");
+  const appMetadata={...(userData.user.app_metadata||{}),must_change_password:true};
+  const {data:updated,error:updateError}=await db.auth.admin.updateUserById(userId,{password:tempPassword,app_metadata:appMetadata});
+  if(updateError||!updated.user){console.error("admin_password_reset_failed",updateError?.message||"unknown");return out({error:"password_reset_failed"},400);}
+  return out({reset:true,user:{id:updated.user.id,email:updated.user.email},temporary_password:tempPassword,must_change_password:true});
+ }
  if(body.action==="create_user"){
   const email=String(body.email||"").trim().toLowerCase(),days=Number(body.days);
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!Number.isInteger(days)||days<1||days>3650)return out({error:"invalid_input"},400);
