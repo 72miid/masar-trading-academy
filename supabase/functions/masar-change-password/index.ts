@@ -14,7 +14,7 @@ Deno.serve(async(req)=>{
  if(user.app_metadata?.must_change_password!==true)return out({error:"password_change_not_required"},409);
  let body:any;try{body=await req.json()}catch{return out({error:"invalid_json"},400)}
  const password=String(body.password||"");
- if(password.length<8||password.length>128)return out({error:"password_minimum_8_characters"},400);
+ if(password.length<8||password.length>128)return out({error:"password_minimum_8_characters"},400);\n if(!/[a-z]/.test(password)||!/[A-Z]/.test(password)||!/[0-9]/.test(password))return out({error:"password_requires_lowercase_uppercase_number"},400);
  const db=createClient(url,key,{auth:{persistSession:false}});
  const appMetadata={...(user.app_metadata||{}),must_change_password:false};
  const {data,error:updateError}=await db.auth.admin.updateUserById(user.id,{password,app_metadata:appMetadata});
