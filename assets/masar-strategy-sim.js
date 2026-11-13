@@ -73,6 +73,8 @@ function evaluateTradePlan(input){
  const geometry=side==="buy"?(stop<entry&&target>entry):side==="sell"?(stop>entry&&target<entry):false;
  if(!geometry)errors.push(side==="buy"?"للشراء يجب أن يكون وقف الخسارة أسفل الدخول والهدف أعلى الدخول.":"للبيع يجب أن يكون وقف الخسارة أعلى الدخول والهدف أسفل الدخول.");
  if(input.expectedSide&&side!==input.expectedSide)errors.push("اتجاه الصفقة لا يتوافق مع اتجاه الإعداد في هذا السيناريو.");
+ if(side==="buy"&&Number.isFinite(Number(input.structureLow))&&Number.isFinite(stop)&&stop>=Number(input.structureLow))errors.push("وقف الشراء يجب أن يكون أسفل قاع البنية القريبة التي تُبطل الفكرة.");
+ if(side==="sell"&&Number.isFinite(Number(input.structureHigh))&&Number.isFinite(stop)&&stop<=Number(input.structureHigh))errors.push("وقف البيع يجب أن يكون أعلى قمة البنية القريبة التي تُبطل الفكرة.");
  if(!Number.isFinite(size)||size<=0)errors.push("حجم الصفقة الافتراضي يجب أن يكون أكبر من صفر.");
  if(String(input.reason||"").trim().length<12)errors.push("اكتب سبب دخول واضحاً لا يقل عن 12 حرفاً.");
  if(String(input.cancel||"").trim().length<8)errors.push("حدد شرط إلغاء واضحاً لا يقل عن 8 أحرف.");
@@ -91,13 +93,13 @@ function evaluateTradePlan(input){
  const cancelScore=String(input.cancel||"").trim().length>=8?10:0;
  return {valid:errors.length===0,errors,warnings,riskDistance,rewardDistance,riskReward,score:directionScore+geometryScore+rrScore+proximityScore+sizeScore+reasonScore+cancelScore};
 }
-function decisionReference(){const bars=pathFor();const recent=bars.slice(19,24);return {price:bars[23].c,averageRange:recent.reduce((sum,b)=>sum+(b.h-b.l),0)/Math.max(1,recent.length)}}
-function readPlan(){const ref=decisionReference();return {side: $("srSide").value,entry:$("srEntry").value,stop:$("srStop").value,target:$("srTarget").value,size:$("srSize").value,reason:$("srReason").value,cancel:$("srCancel").value,expectedSide:caseData.expectedSide||null,referencePrice:ref.price,averageRange:ref.averageRange}}
+function decisionReference(){const bars=pathFor();const recent=bars.slice(19,24);return {price:bars[23].c,averageRange:recent.reduce((sum,b)=>sum+(b.h-b.l),0)/Math.max(1,recent.length),structureLow:Math.min(...recent.map(b=>b.l)),structureHigh:Math.max(...recent.map(b=>b.h))}}
+function readPlan(){const ref=decisionReference();return {side: $("srSide").value,entry:$("srEntry").value,stop:$("srStop").value,target:$("srTarget").value,size:$("srSize").value,reason:$("srReason").value,cancel:$("srCancel").value,expectedSide:caseData.expectedSide||null,referencePrice:ref.price,averageRange:ref.averageRange,structureLow:ref.structureLow,structureHigh:ref.structureHigh}}
 function syncPlanFields(){const show=requiresTradePlan($("srDecision").value);$("srPlanFields").classList.toggle("hide",!show);if(show)previewPlan()}
 function previewPlan(){const box=$("srPlanMetrics");if(!box)return;const p=readPlan(),entry=Number(p.entry),stop=Number(p.stop),target=Number(p.target);if(![entry,stop,target].every(x=>Number.isFinite(x)&&x>0)){box.textContent="أدخل سعر الدخول والوقف والهدف لعرض المسافات ونسبة المخاطرة إلى العائد.";return}const risk=Math.abs(entry-stop),reward=Math.abs(target-entry),rr=risk>0?reward/risk:null;box.textContent="مسافة المخاطرة السعرية: "+risk.toFixed(5)+" · مسافة الهدف: "+reward.toFixed(5)+" · العائد إلى المخاطرة: "+(rr===null?"غير محسوب":rr.toFixed(2)+":1")+" · لا تمثل هذه الأرقام قيمة مالية أو مخاطرة نقدية."}
 function reset(){
  revealed=20;caseData=cases[caseIndex];
- $("srDecision").value="";$("srReason").value="";$("srFeedback").textContent="";
+ $("srDecision").value="";$("srReason").value="";$("srSide").value="buy";$("srEntry").value="";$("srStop").value="";$("srTarget").value="";$("srSize").value="";$("srCancel").value="";$("srPlanFields").classList.add("hide");$("srPlanMetrics").textContent="ستظهر مسافات الوقف والهدف ونسبة المخاطرة إلى العائد بعد إدخال الأسعار.";$("srFeedback").textContent="";
  $("srExplanation").textContent="لن تظهر المراجعة إلا بعد تثبيت قرارك.";
  $("srRule").textContent="قاعدة هذه الاستراتيجية: "+rules[selected];
  $("srTitle").textContent=currentStrategy().name+" — "+caseData.label;
@@ -133,8 +135,8 @@ function check(){
  $("srDecision").disabled=true;$("srCheck").disabled=true;["srReason","srSide","srEntry","srStop","srTarget","srSize","srCancel"].forEach(id=>$(id).disabled=true);renderScore();
 }
 function renderScore(){
- const total=18,done=Object.keys(completed).length,correct=Object.values(completed).filter(x=>x&&x.ok).length;
- $("srScore").textContent=done+" / "+total+" سيناريو · "+correct+" قرارات متوافقة";
+ const total=18,done=Object.keys(completed).length,correct=Object.values(completed).filter(x=>x&&x.ok).length,points=Object.values(completed).reduce((sum,x)=>sum+(Number(x&&x.score)||0),0);
+ $("srScore").textContent=done+" / "+total+" سيناريو · "+correct+" قرارات متوافقة · "+points+" نقطة";
  $("srHistory").textContent=done?"محاولات محفوظة: "+done+" · المتبقي: "+(total-done):"لم تُسجّل محاولات بعد.";
 }
 window.openStrategyReplay=function(id){
