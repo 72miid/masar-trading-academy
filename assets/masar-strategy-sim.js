@@ -45,7 +45,7 @@ function mount(){
  '<div class="toolgrid"><div class="field"><label>الاستراتيجية</label><select id="srStrategy"></select></div><div class="field"><label>السيناريو</label><select id="srCase"><option value="0">إعداد محتمل</option><option value="1">إشارة فاشلة</option><option value="2">لا توجد أفضلية</option></select></div></div>'+
  '<div class="card"><div class="sectionhead"><h3 id="srTitle"></h3><span id="srProgress" class="pill"></span></div><canvas id="srChart" width="900" height="330" style="width:100%;height:260px;background:#091321;border:1px solid var(--line);border-radius:10px"></canvas><div class="actions"><button class="btn" id="srNext">كشف الشمعة التالية</button><button class="btn alt" id="srReset">إعادة السيناريو</button></div><p id="srHint" class="small"></p></div>'+
  '<div class="toolgrid"><div class="card"><h3>قرارك قبل معرفة النتيجة</h3><div class="field"><label>ماذا ستفعل؟</label><select id="srDecision"><option value="">اختر القرار</option><option value="trade">أجهز صفقة بعد تحقق الشروط</option><option value="wait">أنتظر تأكيداً إضافياً</option><option value="skip">أتجاوز الإشارة</option></select></div><div class="field"><label>ما الشرط الذي اعتمدت عليه؟</label><textarea id="srReason" rows="3" maxlength="500" placeholder="اكتب الإشارة، نقطة الإبطال، وما الذي سيجعلك تلغي الفكرة..."></textarea></div><button class="btn" id="srCheck">ثبّت قراري واكشف النتيجة</button><div id="srFeedback" class="feedback" aria-live="polite"></div></div><div class="card"><h3>مراجعة المدرب</h3><p id="srExplanation" class="muted">لن تظهر المراجعة إلا بعد تثبيت قرارك.</p><div id="srRule" class="small"></div></div></div>'+
- '<div class="card"><h3>تقدمك</h3><span id="srScore" class="pill">0 / 18 سيناريو</span><div id="srHistory" class="small"></div><p class="small">يُحفظ تقدمك على هذا الجهاز. أكمل السيناريوهات الستة عشر؟ لا؛ المطلوب 18 سيناريو: ثلاثة لكل استراتيجية.</p></div>';
+ '<div class="card"><h3>تقدمك</h3><span id="srScore" class="pill">0 / 18 سيناريو</span><div id="srHistory" class="small"></div><p class="small">يُحفظ تقدمك على هذا الجهاز. لكل استراتيجية ثلاثة سيناريوهات مختلفة، بإجمالي 18 سيناريو.</p></div>';
  view.insertBefore(box,view.firstChild);
  const sel=$("srStrategy");sel.innerHTML=(strategies.length?strategies:ids.map((id,i)=>({id,name:fallbackNames[i]}))).map((x,i)=>'<option value="'+i+'">'+esc(x.name)+'</option>').join("");
  try{completed=JSON.parse(localStorage.getItem("masar_strategy_replay_v1")||"{}")}catch{completed={}}
@@ -69,7 +69,7 @@ function reset(){
  $("srExplanation").textContent="لن تظهر المراجعة إلا بعد تثبيت قرارك.";
  $("srRule").textContent="قاعدة هذه الاستراتيجية: "+rules[selected];
  $("srTitle").textContent=currentStrategy().name+" — "+caseData.label;
- $("srNext").disabled=false;draw();
+ $("srNext").disabled=false;$("srDecision").disabled=false;$("srCheck").disabled=false;draw();
 }
 function draw(){
  const canvas=$("srChart");if(!canvas)return;
