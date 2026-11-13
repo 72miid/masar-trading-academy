@@ -18,7 +18,7 @@ const completeLong = {
   side: "buy", entry: 100, stop: 98, target: 104, size: 2,
   reason: "ارتداد مؤكد من منطقة دعم بعد إغلاق شمعة رفض",
   cancel: "إغلاق شمعة أسفل منطقة الدعم",
-  expectedSide: "buy", referencePrice: 100, averageRange: 0.5
+  expectedSide: "buy", referencePrice: 100, averageRange: 0.5, structureLow: 99.8, structureHigh: 100.2
 };
 const good = api.evaluateTradePlan(completeLong);
 assert.equal(good.valid, true, "accepts a geometrically valid long plan");
@@ -35,6 +35,10 @@ const validShort = api.evaluateTradePlan({
   ...completeLong, side: "sell", stop: 102, target: 96, expectedSide: "sell"
 });
 assert.equal(validShort.valid, true, "accepts correctly ordered short prices");
+
+const insideStructure = api.evaluateTradePlan({ ...completeLong, stop: 99.9 });
+assert.equal(insideStructure.valid, false, "rejects a buy stop that remains inside nearby invalidating structure");
+assert.ok(insideStructure.errors.some(x => /قاع البنية/.test(x)), "explains structural stop placement");
 
 const wrongDirection = api.evaluateTradePlan({ ...completeLong, side: "sell", stop: 102, target: 96 });
 assert.equal(wrongDirection.valid, false, "rejects a plan that contradicts scenario direction");
