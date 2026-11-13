@@ -26,8 +26,9 @@ assert.equal(merged.masar_strategy_replay_v1.s0.score,90,"newer strategy replay 
 assert.equal(merged.masar_ex_0,"ملاحظة سابقة","non-empty saved exercise is not overwritten by empty state");
 assert.equal(merged.masar_ex_1,"ملاحظة جديدة","new exercise note is retained");
 
+class LiveStorage { constructor(){this.data={}} get length(){return Object.keys(this.data).length} key(i){return Object.keys(this.data)[i]??null} getItem(k){return Object.prototype.hasOwnProperty.call(this.data,k)?this.data[k]:null} setItem(k,v){this.data[k]=String(v)} removeItem(k){delete this.data[k]} }
 const timers=[];
-const liveStorage=new Storage();
+const liveStorage=new LiveStorage();
 liveStorage.setItem("masar_local_owner","learner-a");
 liveStorage.setItem("masar_v2",JSON.stringify({completed:[1],scores:{1:5},finalScore:null,journal:[]}));
 let remoteProgress={masar_v2:{completed:[0],scores:{0:4},finalScore:8,journal:[]}};
@@ -40,7 +41,7 @@ async function fakeFetch(url,options={}){
  if(url.includes("/rest/v1/user_progress")&&options.method==="POST"){remoteProgress=JSON.parse(options.body).progress;return {ok:true,text:async()=>""}};
  throw new Error("Unexpected URL in progress sync QA: "+url);
 }
-vm.runInNewContext(source,{window:liveWindow,Storage,localStorage:liveStorage,document:liveDocument,fetch:fakeFetch,TextEncoder,JSON,Date,Set,Object,Array,String,Number,Math,RegExp,setTimeout(fn){timers.push(fn);return timers.length},clearTimeout(){}});
+vm.runInNewContext(source,{window:liveWindow,Storage:LiveStorage,localStorage:liveStorage,document:liveDocument,fetch:fakeFetch,TextEncoder,JSON,Date,Set,Object,Array,String,Number,Math,RegExp,setTimeout(fn){timers.push(fn);return timers.length},clearTimeout(){}});
 await liveWindow.MASARProgressSync.initialize("learner-token");
 assert.deepEqual(Array.from(remoteProgress.masar_v2.completed).sort(),[0,1],"initialization uploads a merged local/cloud learning history");
 assert.equal(remoteProgress.masar_v2.scores[0],4,"cloud quiz score survives initial sync");
