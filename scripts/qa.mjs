@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from "node:fs";
 import vm from "node:vm";
 import assert from "node:assert/strict";
 const html=readFileSync(new URL("../index.html",import.meta.url),"utf8");
+assert.ok(!html.includes("strategyMT5["),"strategy renderer must not reference an undefined MT5 map");
 const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(x=>x[1]).filter(x=>x.trim());
 assert.ok(scripts.length>0,"inline application script exists");
 for(const [i,code] of scripts.entries())new vm.Script(code,{filename:"inline-"+i+".js"});
