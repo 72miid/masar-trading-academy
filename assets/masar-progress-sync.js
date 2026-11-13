@@ -60,6 +60,6 @@ async function initialize(accessToken){
  if(Object.keys(merged).length)await flush();
  return {ok:true,userId};
 }
-window.MASARProgressSync={initialize,flush,getStatus:()=>({ready,userId,lastError})};
+window.MASARProgressSync={initialize,flush,getStatus:()=>({ready,userId,lastError}),showError:message=>setStatus((message||"تعذر تفعيل الحفظ السحابي.")+" بيانات هذا الجهاز ما زالت محفوظة محلياً.",true)};
 if(window.__MASAR_PROGRESS_SYNC_TEST__)window.__MASAR_PROGRESS_SYNC_TEST__={mergeProgress,isKey,mergeObject,mergeById};
 })();
