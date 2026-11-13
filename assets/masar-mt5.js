@@ -28,7 +28,7 @@ function install(){
 function render(){
  if(!course)return;install();
  const d=activeDevice(),p=progress(),l=course.lessons[current],root=document.getElementById("mt5View");
- root.innerHTML='<div class="sectionhead"><div><div class="eyebrow">مسار مستقل داخل MASAR PRO</div><h2>'+esc(course.title)+'</h2><p class="muted">'+esc(course.description)+'</p></div><span class="pill">11 درساً</span></div>'+
+ root.innerHTML='<div class="sectionhead"><div><div class="eyebrow">مسار مستقل داخل MASAR PRO</div><h2>'+esc(course.title)+'</h2><p class="muted">'+esc(course.description)+'</p></div><span class="pill">'+course.lessons.length+' درساً</span></div>'+
  '<div class="card notice">'+esc(course.safety)+'<p><b>تنبيه:</b> قد تختلف أسماء القوائم ومواقع الأزرار حسب إصدار MT5 والجهاز والوسيط. الإرشادات تشرح الوظائف الأساسية ولا تمثل لقطة حرفية لكل واجهة.</p></div>'+
  '<div class="card mt5-device"><b>نسخة الشرح</b><div class="mt5-device-controls"><button data-device="auto" class="'+(device==="auto"?"selected":"")+'">تلقائي</button><button data-device="mobile" class="'+(device==="mobile"?"selected":"")+'">الهاتف</button><button data-device="desktop" class="'+(device==="desktop"?"selected":"")+'">الكمبيوتر</button></div><p class="small">الجهاز المحدد: '+(d==="mobile"?"الهاتف":"الكمبيوتر")+'. يمكنك التبديل يدوياً.</p></div>'+
  '<div class="mt5-layout"><aside class="card mt5-list"><h3>دروس الدورة</h3>'+course.lessons.map((x,i)=>'<button class="mt5-lesson-link '+(i===current?"active":"")+'" data-lesson="'+i+'"><span>'+(i+1).toString().padStart(2,"0")+'</span>'+esc(x.title)+'<small>'+(p[i]?"مكتمل":"غير مكتمل")+'</small></button>').join("")+'</aside>'+
