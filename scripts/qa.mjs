@@ -57,7 +57,7 @@ for(const token of ["auth.getUser","app_metadata","updateUserById","password.len
 const app=readFileSync(new URL("../index.html",import.meta.url),"utf8");
 for(const token of ["masar-access-check","academyApp","accessGate","sessionStorage"])assert.ok(app.includes(token),"academy access gate missing: "+token);
 const sw=readFileSync(new URL("../sw.js",import.meta.url),"utf8");
-assert.ok(sw.includes("masar-shell-v10"),"service worker cache version is current");
+assert.ok(sw.includes("masar-shell-v12"),"service worker cache version is current");
 assert.ok(sw.includes("assets/curriculum-lab.js"),"practical lab is precached");
 const lab=readFileSync(new URL("../assets/curriculum-lab.js",import.meta.url),"utf8");
 new vm.Script(lab,{filename:"curriculum-lab.js"});
