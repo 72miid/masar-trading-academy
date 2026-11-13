@@ -24,14 +24,14 @@ assert.ok(!/create table public\.(?:subscriptions|payment_webhook_events)|paymen
 const account=readFileSync(new URL("../account.html",import.meta.url),"utf8");
 for(const token of ["loginBtn","logoutBtn","subscriptions?select=status","sessionStorage","supabaseAnonKey","app_metadata","masar-change-password","must_change_password","changePasswordPanel","savePasswordBtn","confirmPassword","ensureLocalOwner","masar_local_owner"])assert.ok(account.includes(token),"account integration missing: "+token);
 const admin=readFileSync(new URL("../admin.html",import.meta.url),"utf8");
-for(const token of ["create_user","masar-admin-users","مدة الاشتراك","refreshUsers","set_access","temporary_password"])assert.ok(admin.includes(token),"admin page missing: "+token);
+for(const token of ["create_user","set_display_name","displayName","masar-admin-users","مدة الاشتراك","refreshUsers","set_access","temporary_password"])assert.ok(admin.includes(token),"admin page missing: "+token);
 const adminScripts=[...admin.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(x=>x[1]).filter(x=>x.trim());
 assert.ok(adminScripts.length>0,"admin inline script exists");
 assert.ok(admin.includes('name="robots" content="noindex,nofollow"'),"admin page is excluded from search indexing");
 assert.ok(account.includes('name="robots" content="noindex,nofollow"'),"account page is excluded from search indexing");
 for(const [i,code] of adminScripts.entries())new vm.Script(code,{filename:"admin-inline-"+i+".js"});
 const adminFunction=readFileSync(new URL("../supabase/functions/masar-admin-users/index.ts",import.meta.url),"utf8");
-for(const token of ["auth.getUser","admin_users","createUser","temporary_password","must_change_password","SUPABASE_SERVICE_ROLE_KEY","current_period_end","admin_only","list_users","set_access"])assert.ok(adminFunction.includes(token),"admin function security missing: "+token);
+for(const token of ["auth.getUser","admin_users","createUser","user_metadata","display_name","set_display_name","temporary_password","must_change_password","SUPABASE_SERVICE_ROLE_KEY","current_period_end","admin_only","list_users","set_access"])assert.ok(adminFunction.includes(token),"admin function security missing: "+token);
 assert.ok(adminFunction.includes("const base=stillActive?Date.parse(existing.current_period_end):now"),"active renewals extend from current expiry");
 assert.ok(adminFunction.includes(".test(email)")&&!adminFunction.includes(String.raw`\\s`)&&!adminFunction.includes(String.raw`\\.`),"admin email validation regex uses valid single escapes");
 assert.ok(adminFunction.includes('"Cache-Control":"no-store"'),"admin responses are not cached");
