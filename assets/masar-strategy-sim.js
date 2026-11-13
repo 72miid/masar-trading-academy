@@ -72,6 +72,7 @@ function renderScore(){
  $("srScore").textContent=done+" / "+total+" سيناريو · "+correct+" قرار مناسب";
  $("srHistory").textContent=done?"محاولات محفوظة: "+done+" · القرارات المناسبة: "+correct+" · المتبقي: "+(total-done):"لم تُسجّل محاولات بعد.";
 }
+window.openStrategyReplay=function(id){const index=strategies.findIndex(x=>x.id===id);if(index<0)return;selected=index;caseIndex=0;const s=$("srStrategy");if(s)s.value=String(index);const c=$("srCase");if(c)c.value="0";reset();if(typeof window.showView==="function")window.showView("simulator");setTimeout(()=>{const panel=$("strategyReplay");if(panel)panel.scrollIntoView({behavior:"smooth",block:"start"})},80)};
 function init(){
  mount();
  const old=window.masarInitialize;
