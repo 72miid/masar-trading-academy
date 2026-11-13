@@ -1,0 +1,17 @@
+# Supabase local/deploy configuration
+# The webhook endpoint uses its own HMAC signature verification because payment
+# providers cannot present a Supabase user JWT. Never expose the HMAC secret.
+[functions.masar-subscription-webhook]
+verify_jwt = false
+
+[functions.masar-admin-users]
+verify_jwt = true
+
+[functions.masar-access-check]
+verify_jwt = true
+
+[functions.masar-change-password]
+verify_jwt = true
+
+[functions.masar-content]
+verify_jwt = true

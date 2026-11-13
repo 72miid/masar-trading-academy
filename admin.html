@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
+<title>إدارة المشتركين | MASAR PRO</title>
+<style>
+:root{color-scheme:dark;--panel:#152338;--line:#2a3c53;--gold:#d8b56c;--text:#f2f5fa;--muted:#b0bdcc}*{box-sizing:border-box}body{margin:0;background:#0a111d;color:var(--text);font-family:system-ui,Tahoma,sans-serif;line-height:1.8}.wrap{max-width:760px;margin:35px auto;padding:0 18px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;margin:14px 0}.brand{color:var(--gold);font-weight:900}label{display:block;margin:12px 0 5px;color:var(--muted)}input{width:100%;padding:12px;border-radius:9px;border:1px solid var(--line);background:#0b1421;color:var(--text);font:inherit}button,a{display:inline-block;padding:10px 16px;border-radius:10px;border:1px solid var(--gold);background:var(--gold);color:#17202b;font:inherit;font-weight:800;cursor:pointer;text-decoration:none;margin:8px 5px 0 0}.secondary{background:transparent;color:var(--gold)}.muted{color:var(--muted)}.status{padding:12px;border-radius:10px;background:#0c1725;border:1px solid var(--line);white-space:pre-wrap}.good{color:#72d1aa}.bad{color:#f29b91}.hide{display:none!important}
+</style></head>
+<body><main class="wrap">
+<div class="brand">MASAR PRO</div><h1>إدارة المشتركين</h1>
+<p class="muted">بعد تأكيد وصول التحويل، أنشئ حساب المشترك وحدد مدة صلاحيته. أرسل كلمة المرور له عبر قناة خاصة.</p>
+<section id="loginPanel" class="panel">
+<h2>دخول مسؤول الأكاديمية</h2>
+<label for="loginEmail">البريد الإلكتروني</label><input id="loginEmail" type="email" autocomplete="username">
+<label for="loginPassword">كلمة المرور</label><input id="loginPassword" type="password" autocomplete="current-password">
+<button id="login">تسجيل الدخول والتحقق من الصلاحية</button>
+<div id="loginMessage" class="status" role="status" aria-live="polite">سجّل الدخول بحساب المدير للوصول إلى لوحة التحكم.</div>
+</section>
+<section id="panel" class="panel hide">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2>إضافة مشترك جديد</h2><button class="secondary" id="logout" type="button">تسجيل الخروج</button></div>
+<label for="email">البريد الإلكتروني</label><input id="email" type="email" autocomplete="off">
+<p class="muted">سيُنشئ النظام كلمة مرور مؤقتة من 8 أرقام. يجب على المشترك تغييرها عند أول تسجيل دخول.</p>
+<label for="days">مدة الاشتراك بالأيام</label><input id="days" type="number" min="1" max="3650" value="30">
+<button id="create">إنشاء الحساب وتفعيل الاشتراك</button>
+<div id="result" class="status" role="status" aria-live="polite">بانتظار العملية.</div><hr>
+<h2>المشتركون الحاليون</h2><button id="refresh" type="button">تحديث القائمة</button><div id="users" class="status">اضغط تحديث القائمة لعرض الحسابات.</div>
+</section><p><a href="./account.html">العودة إلى الحساب</a></p>
+</main>
+<script src="./assets/masar-config.js"></script>
+<script>
+const cfg=window.MASAR_CONFIG||{},$=id=>document.getElementById(id);let session=null;
+const loginMsg=(t,k="")=>{$("loginMessage").textContent=t;$("loginMessage").className="status "+k};
+const say=(t,k="")=>{$("result").textContent=t;$("result").className="status "+k};
+function ready(){return /^https:\/\//.test(cfg.supabaseUrl||"")&&typeof cfg.supabaseAnonKey==="string"&&cfg.supabaseAnonKey.length>20}
+async function auth(path,method="GET",body=null,token=null){const headers={apikey:cfg.supabaseAnonKey,"Content-Type":"application/json"};if(token)headers.Authorization="Bearer "+token;const r=await fetch(cfg.supabaseUrl.replace(/\/$/,"")+"/auth/v1/"+path,{method,headers,...(body?{body:JSON.stringify(body)}:{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.msg||d.message||d.error_description||d.error||"تعذر تسجيل الدخول");return d}
+async function invoke(action,extra={}){const r=await fetch(cfg.supabaseUrl.replace(/\/$/,"")+"/functions/v1/masar-admin-users",{method:"POST",headers:{apikey:cfg.supabaseAnonKey,Authorization:"Bearer "+session.access_token,"Content-Type":"application/json"},body:JSON.stringify({action,...extra})});const d=await r.json().catch(()=>({}));if(!r.ok){const detail=[d.error,d.code,d.message].filter(Boolean).join(" — ");throw new Error(detail||"تعذر تنفيذ العملية");}return d}
+async function verifyAdmin(){await invoke("whoami");$("loginPanel").classList.add("hide");$("panel").classList.remove("hide");refreshUsers()}
+$("login").onclick=async()=>{try{$("login").disabled=true;loginMsg("جارٍ التحقق من الحساب…");const d=await auth("token?grant_type=password","POST",{email:$("loginEmail").value.trim(),password:$("loginPassword").value});if(!d.access_token)throw Error("لم يتم إصدار جلسة. تحقق من بيانات الدخول.");session={access_token:d.access_token};await verifyAdmin();loginMsg("تم التحقق من صلاحية المدير.","good")}catch(e){session=null;$("panel").classList.add("hide");$("loginPanel").classList.remove("hide");loginMsg(e.message==="admin_only"?"هذا الحساب ليس ضمن مديري الأكاديمية.":e.message,"bad")}finally{$("login").disabled=false}};
+$("logout").onclick=()=>{session=null;$("panel").classList.add("hide");$("loginPanel").classList.remove("hide");$("loginPassword").value="";loginMsg("تم تسجيل الخروج.")};
+async function refreshUsers(){try{const d=await invoke("list_users"),host=$("users");host.innerHTML="";if(!d.users.length){host.textContent="لا يوجد مشتركون.";return}for(const u of d.users){const row=document.createElement("div");row.style.cssText="border-bottom:1px solid #2a3c53;padding:10px 0";const active=u.status==="active"&&Date.parse(u.current_period_end)>Date.now();const info=document.createElement("div");info.textContent=(u.email||u.id)+" — "+(active?"فعّال حتى ":"غير فعّال — ")+new Date(u.current_period_end).toLocaleDateString("ar-OM");row.append(info);const days=document.createElement("input");days.type="number";days.min="0";days.max="3650";days.value="30";days.setAttribute("aria-label","مدة التمديد بالأيام");row.append(days);const renew=document.createElement("button");renew.textContent="تفعيل / تجديد";renew.onclick=async()=>{try{await invoke("set_access",{user_id:u.id,days:Number(days.value)});say("تم تحديث الاشتراك.","good");refreshUsers()}catch(e){say(e.message,"bad")}};row.append(renew);const stop=document.createElement("button");stop.textContent="إيقاف";stop.onclick=async()=>{if(!confirm("تأكيد إيقاف الاشتراك؟"))return;try{await invoke("set_access",{user_id:u.id,days:0});say("تم إيقاف الاشتراك.","good");refreshUsers()}catch(e){say(e.message,"bad")}};row.append(stop);host.append(row)}}catch(e){$("users").textContent=e.message}}
+$("refresh").onclick=refreshUsers;
+$("create").onclick=async()=>{try{$("create").disabled=true;say("جارٍ إنشاء الحساب…");const d=await invoke("create_user",{email:$("email").value.trim(),days:Number($("days").value)});say("تم إنشاء الحساب بنجاح.\nالبريد: "+d.user.email+"\nكلمة المرور المؤقتة: "+d.temporary_password+"\nيجب على المشترك تغييرها عند أول دخول.\nينتهي الاشتراك: "+new Date(d.current_period_end).toLocaleString("ar-OM"),"good");$("email").value="";refreshUsers()}catch(e){say(e.message,"bad")}finally{$("create").disabled=false}};
+if(!ready()){loginMsg("إعداد اتصال Supabase غير مكتمل.","bad")}
+</script></body></html>

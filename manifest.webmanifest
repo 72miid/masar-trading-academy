@@ -1,0 +1,20 @@
+{
+  "name": "MASAR Trading Academy",
+  "short_name": "MASAR",
+  "description": "منصة تعليمية عربية للفوركس والذهب وإدارة المخاطر",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a111d",
+  "theme_color": "#101827",
+  "icons": [
+    {
+      "src": "./assets/masar-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
