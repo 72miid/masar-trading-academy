@@ -6,7 +6,7 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const ids=["sr-zones","break-retest","trend-follow","ma-pullback","indicators","candles-range"];
 const fallbackNames=["الدعم والمقاومة","الاختراق وإعادة الاختبار","اتباع الاتجاه","المتوسط المتحرك والتراجع","RSI وMACD وBollinger Bands","الشموع الانعكاسية والتداول داخل النطاق"];
 const cases=[
- {kind:"valid",label:"فرصة تستوفي الشروط",expected:"trade",why:"تكوّن الشرط المحدد في هذه الاستراتيجية قبل نقطة القرار. كان يمكن إعداد صفقة افتراضية بعد تحديد نقطة الإبطال والحجم، وليس الدخول العشوائي."},
+ {kind:"valid",label:"فرصة تستوفي الشروط",expected:"trade",expectedSide:"buy",why:"تكوّن الشرط المحدد في هذه الاستراتيجية قبل نقطة القرار. كان يمكن إعداد صفقة افتراضية بعد تحديد نقطة الإبطال والحجم، وليس الدخول العشوائي."},
  {kind:"false",label:"إشارة فاشلة",expected:"skip",why:"الإشارة لم تستوفِ شرط التأكيد أو فشلت في الحفاظ على البنية. تجاوزها يحمي المتعلم من مطاردة الحركة."},
  {kind:"range",label:"لا توجد أفضلية واضحة",expected:"wait",why:"السعر لا يقدم إعداداً مكتملاً وفق قواعد الاستراتيجية. الانتظار قرار صحيح وليس فرصة ضائعة."}
 ];
@@ -44,9 +44,10 @@ function mount(){
  '<div class="notice"><b>تنبيه:</b> هذه سيناريوهات اصطناعية مصممة للتعليم، وليست بيانات سوق أو اختباراً تاريخياً. لا تقيس ربحية الاستراتيجية ولا تتنبأ بالسوق.</div>'+
  '<div class="toolgrid"><div class="field"><label>الاستراتيجية</label><select id="srStrategy"></select></div><div class="field"><label>السيناريو</label><select id="srCase"><option value="0">إعداد محتمل</option><option value="1">إشارة فاشلة</option><option value="2">لا توجد أفضلية</option></select></div></div>'+
  '<div class="card"><div class="sectionhead"><h3 id="srTitle"></h3><span id="srProgress" class="pill"></span></div><canvas id="srChart" width="900" height="330" style="width:100%;height:260px;background:#091321;border:1px solid var(--line);border-radius:10px"></canvas><div class="actions"><button class="btn" id="srNext">كشف الشمعة التالية</button><button class="btn alt" id="srReset">إعادة السيناريو</button></div><p id="srHint" class="small"></p></div>'+
- '<div class="toolgrid"><div class="card"><h3>قرارك قبل معرفة النتيجة</h3><div class="field"><label>ماذا ستفعل؟</label><select id="srDecision"><option value="">اختر القرار</option><option value="trade">أجهز صفقة بعد تحقق الشروط</option><option value="wait">أنتظر تأكيداً إضافياً</option><option value="skip">أتجاوز الإشارة</option></select></div><div class="field"><label>ما الشرط الذي اعتمدت عليه؟</label><textarea id="srReason" rows="3" maxlength="500" placeholder="اكتب الإشارة، نقطة الإبطال، وما الذي سيجعلك تلغي الفكرة..."></textarea></div><button class="btn" id="srCheck">ثبّت قراري واكشف النتيجة</button><div id="srFeedback" class="feedback" aria-live="polite"></div></div><div class="card"><h3>مراجعة المدرب</h3><p id="srExplanation" class="muted">لن تظهر المراجعة إلا بعد تثبيت قرارك.</p><div id="srRule" class="small"></div></div></div>'+
+ '<div class="toolgrid"><div class="card"><h3>قرارك قبل معرفة النتيجة</h3><div class="field"><label>ماذا ستفعل؟</label><select id="srDecision"><option value="">اختر القرار</option><option value="trade">أجهز صفقة بعد تحقق الشروط</option><option value="wait">أنتظر تأكيداً إضافياً</option><option value="skip">أتجاوز الإشارة</option></select></div><div id="srPlanFields" class="hide"><div class="notice"><b>خطة افتراضية تعليمية:</b> أدخل الأسعار بوحدات السعر المعروضة في السيناريو. حجم الصفقة وحدات افتراضية فقط؛ لا نحسب مخاطرة مالية أو قيمة نقطة أو عقد.</div><p class="small">التقييم: اتجاه الصفقة 25، هندسة الوقف والهدف 20، العائد إلى المخاطرة 15، قرب الدخول 10، الحجم 10، وتوثيق السبب والإبطال 20. فحص النص يعتمد على كلمات فنية قابلة للملاحظة، ولا يفهم المعنى الكامل مثل المدرب البشري.</p><div class="toolgrid"><div class="field"><label>اتجاه الصفقة</label><select id="srSide"><option value="buy">شراء</option><option value="sell">بيع</option></select></div><div class="field"><label>سعر الدخول</label><input id="srEntry" type="number" min="0" step="any" inputmode="decimal"></div><div class="field"><label>وقف الخسارة</label><input id="srStop" type="number" min="0" step="any" inputmode="decimal"></div><div class="field"><label>الهدف</label><input id="srTarget" type="number" min="0" step="any" inputmode="decimal"></div><div class="field"><label>حجم الصفقة الافتراضي (وحدات)</label><input id="srSize" type="number" min="0" step="any" inputmode="decimal"></div></div><div class="field"><label>شرط إلغاء الفكرة</label><textarea id="srCancel" rows="2" maxlength="300" placeholder="ما الذي يبطل الفكرة قبل الدخول أو أثناء الانتظار؟"></textarea></div><div id="srPlanMetrics" class="small" aria-live="polite">ستظهر مسافات الوقف والهدف ونسبة المخاطرة إلى العائد بعد إدخال الأسعار.</div></div><div class="field"><label>سبب القرار / سبب الدخول</label><textarea id="srReason" rows="3" maxlength="500" placeholder="اذكر إشارة الاستراتيجية والسبب الذي يدعم قرارك..."></textarea></div><button class="btn" id="srCheck">ثبّت القرار والخطة واكشف النتيجة</button><div id="srFeedback" class="feedback" aria-live="polite"></div></div><div class="card"><h3>مراجعة المدرب</h3><p id="srExplanation" class="muted">لن تظهر المراجعة إلا بعد تثبيت قرارك.</p><div id="srRule" class="small"></div></div></div>'+
  '<div class="card"><h3>تقدمك</h3><span id="srScore" class="pill">0 / 18 سيناريو</span><div id="srHistory" class="small"></div><p class="small">يُحفظ تقدمك على هذا الجهاز. لكل استراتيجية ثلاثة سيناريوهات مختلفة، بإجمالي 18 سيناريو.</p></div>';
  view.insertBefore(box,view.firstChild);
+ $("srDecision").addEventListener("change",syncPlanFields);["srSide","srEntry","srStop","srTarget","srSize"].forEach(id=>$(id).addEventListener("input",previewPlan));
  const sel=$("srStrategy");sel.innerHTML=(strategies.length?strategies:ids.map((id,i)=>({id,name:fallbackNames[i]}))).map((x,i)=>'<option value="'+i+'">'+esc(x.name)+'</option>').join("");
  try{completed=JSON.parse(localStorage.getItem("masar_strategy_replay_v1")||"{}")}catch{completed={}}
  sel.addEventListener("change",()=>{selected=+sel.value;reset()});
@@ -63,13 +64,51 @@ const rules=[
  "المؤشرات: اشترط توافق قواعد المؤشرات مع حركة السعر والسياق. لا تتخذ القرار من RSI أو MACD منفرداً.",
  "الشموع والنطاق: حدد الحد أولاً، وانتظر إغلاق نموذج الشمعة قربه؛ لا تحكم قبل اكتمال الشمعة."
 ];
+function requiresTradePlan(decision){return decision==="trade"}
+function evaluateTradePlan(input){
+ const errors=[],warnings=[];
+ const side=input.side,entry=Number(input.entry),stop=Number(input.stop),target=Number(input.target),size=Number(input.size),reference=Number(input.referencePrice),range=Number(input.averageRange);
+ const prices=[entry,stop,target];
+ if(![entry,stop,target].every(Number.isFinite)||prices.some(x=>x<=0))errors.push("أدخل أسعاراً موجبة وصحيحة للدخول والوقف والهدف.");
+ const geometry=side==="buy"?(stop<entry&&target>entry):side==="sell"?(stop>entry&&target<entry):false;
+ if(!geometry)errors.push(side==="buy"?"للشراء يجب أن يكون وقف الخسارة أسفل الدخول والهدف أعلى الدخول.":"للبيع يجب أن يكون وقف الخسارة أعلى الدخول والهدف أسفل الدخول.");
+ if(input.expectedSide&&side!==input.expectedSide)errors.push("اتجاه الصفقة لا يتوافق مع اتجاه الإعداد في هذا السيناريو.");
+ if(side==="buy"&&Number.isFinite(Number(input.structureLow))&&Number.isFinite(stop)&&stop>=Number(input.structureLow))errors.push("وقف الشراء يجب أن يكون أسفل قاع البنية القريبة التي تُبطل الفكرة.");
+ if(side==="sell"&&Number.isFinite(Number(input.structureHigh))&&Number.isFinite(stop)&&stop<=Number(input.structureHigh))errors.push("وقف البيع يجب أن يكون أعلى قمة البنية القريبة التي تُبطل الفكرة.");
+ if(!Number.isFinite(size)||size<=0)errors.push("حجم الصفقة الافتراضي يجب أن يكون أكبر من صفر.");
+ const reasonText=String(input.reason||"").trim(),cancelText=String(input.cancel||"").trim();
+ const reasonEvidence=/(دعم|مقاومة|اختراق|إعادة.?اختبار|اتجاه|متوسط|شمعة|ارتداد|تأكيد|إغلاق|قمة|قاع|زخم|نطاق|rsi|macd|bollinger|support|resistance|breakout|retest|trend|candle|range)/i.test(reasonText);
+ const cancelEvidence=/(إغلاق|كسر|اختراق|فشل|عودة|تجاوز|منطقة|مستوى|قمة|قاع|إبطال|شمعة|close|break|invalid|level|zone|below|above)/i.test(cancelText);
+ if(reasonText.length<12)errors.push("اكتب سبب دخول واضحاً لا يقل عن 12 حرفاً.");
+ else if(!reasonEvidence)errors.push("اذكر إشارة فنية محددة في سبب الدخول، مثل دعم أو اختراق أو اتجاه أو شمعة تأكيد.");
+ if(cancelText.length<8)errors.push("حدد شرط إلغاء واضحاً لا يقل عن 8 أحرف.");
+ else if(!cancelEvidence)errors.push("اكتب شرط إلغاء قابل للملاحظة، مثل إغلاق أسفل المستوى أو فشل إعادة الاختبار.");
+ const riskDistance=Number.isFinite(entry)&&Number.isFinite(stop)?Math.abs(entry-stop):null;
+ const rewardDistance=Number.isFinite(entry)&&Number.isFinite(target)?Math.abs(target-entry):null;
+ const riskReward=riskDistance>0&&rewardDistance>0?rewardDistance/riskDistance:null;
+ if(Number.isFinite(reference)&&reference>0&&Number.isFinite(range)&&range>0&&Number.isFinite(entry)&&Math.abs(entry-reference)>Math.max(range*3,reference*.001))errors.push("سعر الدخول بعيد عن سعر القرار مقارنة بمدى الحركة الأخيرة؛ راجع السعر أو انتظر إعداداً جديداً.");
+ if(riskReward!==null&&riskReward<1)warnings.push("العائد المحتمل أقل من مسافة المخاطرة؛ راجع جودة الإعداد ولا تعتمد على النسبة وحدها.");
+ else if(riskReward!==null&&riskReward<1.5)warnings.push("نسبة العائد إلى المخاطرة أقل من 1:1.5؛ هذه ملاحظة تعليمية وليست قاعدة إلزامية لكل استراتيجية.");
+ const directionScore=input.expectedSide?(side===input.expectedSide?25:0):25;
+ const geometryScore=geometry?20:0;
+ const rrScore=riskReward===null?0:riskReward>=1.5?15:riskReward>=1?10:0;
+ const proximityScore=Number.isFinite(reference)&&reference>0&&Number.isFinite(range)&&range>0&&Number.isFinite(entry)&&Math.abs(entry-reference)<=Math.max(range*3,reference*.001)?10:0;
+ const sizeScore=Number.isFinite(size)&&size>0?10:0;
+ const reasonScore=String(input.reason||"").trim().length>=12?10:0;
+ const cancelScore=String(input.cancel||"").trim().length>=8?10:0;
+ return {valid:errors.length===0,errors,warnings,riskDistance,rewardDistance,riskReward,score:directionScore+geometryScore+rrScore+proximityScore+sizeScore+reasonScore+cancelScore};
+}
+function decisionReference(){const bars=pathFor();const recent=bars.slice(19,24);return {price:bars[23].c,averageRange:recent.reduce((sum,b)=>sum+(b.h-b.l),0)/Math.max(1,recent.length),structureLow:Math.min(...recent.map(b=>b.l)),structureHigh:Math.max(...recent.map(b=>b.h))}}
+function readPlan(){const ref=decisionReference();return {side: $("srSide").value,entry:$("srEntry").value,stop:$("srStop").value,target:$("srTarget").value,size:$("srSize").value,reason:$("srReason").value,cancel:$("srCancel").value,expectedSide:caseData.expectedSide||null,referencePrice:ref.price,averageRange:ref.averageRange,structureLow:ref.structureLow,structureHigh:ref.structureHigh}}
+function syncPlanFields(){const show=requiresTradePlan($("srDecision").value);$("srPlanFields").classList.toggle("hide",!show);if(show)previewPlan()}
+function previewPlan(){const box=$("srPlanMetrics");if(!box)return;const p=readPlan(),entry=Number(p.entry),stop=Number(p.stop),target=Number(p.target);if(![entry,stop,target].every(x=>Number.isFinite(x)&&x>0)){box.textContent="أدخل سعر الدخول والوقف والهدف لعرض المسافات ونسبة المخاطرة إلى العائد.";return}const risk=Math.abs(entry-stop),reward=Math.abs(target-entry),rr=risk>0?reward/risk:null;box.textContent="مسافة المخاطرة السعرية: "+risk.toFixed(5)+" · مسافة الهدف: "+reward.toFixed(5)+" · العائد إلى المخاطرة: "+(rr===null?"غير محسوب":rr.toFixed(2)+":1")+" · لا تمثل هذه الأرقام قيمة مالية أو مخاطرة نقدية."}
 function reset(){
  revealed=20;caseData=cases[caseIndex];
- $("srDecision").value="";$("srReason").value="";$("srFeedback").textContent="";
+ $("srDecision").value="";$("srReason").value="";$("srSide").value="buy";$("srEntry").value="";$("srStop").value="";$("srTarget").value="";$("srSize").value="";$("srCancel").value="";$("srPlanFields").classList.add("hide");$("srPlanMetrics").textContent="ستظهر مسافات الوقف والهدف ونسبة المخاطرة إلى العائد بعد إدخال الأسعار.";$("srFeedback").textContent="";
  $("srExplanation").textContent="لن تظهر المراجعة إلا بعد تثبيت قرارك.";
  $("srRule").textContent="قاعدة هذه الاستراتيجية: "+rules[selected];
  $("srTitle").textContent=currentStrategy().name+" — "+caseData.label;
- $("srNext").disabled=false;$("srDecision").disabled=false;$("srCheck").disabled=false;draw();
+ $("srNext").disabled=false;$("srDecision").disabled=false;$("srCheck").disabled=false;["srReason","srSide","srEntry","srStop","srTarget","srSize","srCancel"].forEach(id=>$(id).disabled=false);draw();
 }
 function draw(){
  const canvas=$("srChart");if(!canvas)return;
@@ -87,19 +126,22 @@ function check(){
  if(revealed<24){$("srFeedback").textContent="اكشف الشموع حتى نقطة القرار أولاً.";return}
  if(revealed>24){$("srFeedback").textContent="أعد السيناريو لاتخاذ قرار قبل كشف النتيجة.";return}
  const decision=$("srDecision").value;if(!decision){$("srFeedback").textContent="اختر قرارك أولاً.";return}
+ let plan=null,planReview=null;
+ if(requiresTradePlan(decision)){plan=readPlan();planReview=evaluateTradePlan(plan);if(!planReview.valid){$("srFeedback").textContent="لا يمكن تثبيت الخطة بعد. "+planReview.errors.join(" ");$("srFeedback").style.color="var(--red)";return}plan={side:plan.side,entry:Number(plan.entry),stop:Number(plan.stop),target:Number(plan.target),size:Number(plan.size),reason:plan.reason.trim(),cancel:plan.cancel.trim(),riskDistance:planReview.riskDistance,rewardDistance:planReview.rewardDistance,riskReward:planReview.riskReward,score:planReview.score,warnings:planReview.warnings}}
  const expected=caseData.expected,ok=decision===expected,key=currentStrategy().id+"_"+caseIndex;
- completed[key]={ok,decision,at:new Date().toISOString(),reason:$("srReason").value.slice(0,500)};
+ const score=decision==="trade"?(ok?Math.round(20+planReview.score*.8):Math.round(planReview.score*.4)):(ok?100:0);
+ completed[key]={ok,decision,score,at:new Date().toISOString(),reason:$("srReason").value.slice(0,500),plan};
  try{localStorage.setItem("masar_strategy_replay_v1",JSON.stringify(completed))}catch{}
  revealed=34;draw();
- $("srFeedback").textContent=ok?"قرارك متوافق مع قواعد السيناريو التعليمي.":"قرارك لا يطابق شروط السيناريو. راجع سبب الانتظار أو تجاوز الإشارة.";
+ $("srFeedback").textContent=(ok?"قرارك متوافق مع قواعد السيناريو. ":"القرار لا يطابق الاختيار المتوقع لهذا السيناريو. ")+(plan?"درجة القرار والخطة: "+score+"/100. نسبة العائد إلى المخاطرة "+plan.riskReward.toFixed(2)+":1."+(plan.warnings.length?" ملاحظة: "+plan.warnings.join(" "):""):"لم تكن هناك حاجة إلى خطة صفقة؛ الانتظار أو التجاوز لا يتطلبان إدخال أسعار.");
  $("srFeedback").style.color=ok?"var(--green)":"var(--red)";
- $("srExplanation").textContent=caseData.why;
- $("srRule").textContent="القاعدة: "+rules[selected]+" هذه النتيجة توضح منطق السيناريو فقط، ولا تمثل عائداً مالياً.";
- $("srDecision").disabled=true;$("srCheck").disabled=true;renderScore();
+ $("srExplanation").textContent=caseData.why+(plan?"\n\nمراجعة الخطة: مسافة المخاطرة السعرية "+plan.riskDistance.toFixed(5)+"، ومسافة الهدف "+plan.rewardDistance.toFixed(5)+". حجم الصفقة الافتراضي "+plan.size+" وحدة. التقييم لا يحسب خسارة أو ربحاً نقدياً.":"");
+ $("srRule").textContent="القاعدة: "+rules[selected]+" التقييم يراجع الالتزام بالاتجاه والهندسة السعرية وجودة التوثيق؛ ولا يمثل عائداً مالياً.";
+ $("srDecision").disabled=true;$("srCheck").disabled=true;["srReason","srSide","srEntry","srStop","srTarget","srSize","srCancel"].forEach(id=>$(id).disabled=true);renderScore();
 }
 function renderScore(){
- const total=18,done=Object.keys(completed).length,correct=Object.values(completed).filter(x=>x&&x.ok).length;
- $("srScore").textContent=done+" / "+total+" سيناريو · "+correct+" قرارات متوافقة";
+ const total=18,done=Object.keys(completed).length,correct=Object.values(completed).filter(x=>x&&x.ok).length,points=Object.values(completed).reduce((sum,x)=>sum+(Number(x&&x.score)||0),0);
+ $("srScore").textContent=done+" / "+total+" سيناريو · "+correct+" قرارات متوافقة · "+points+" نقطة";
  $("srHistory").textContent=done?"محاولات محفوظة: "+done+" · المتبقي: "+(total-done):"لم تُسجّل محاولات بعد.";
 }
 window.openStrategyReplay=function(id){
@@ -110,6 +152,7 @@ window.openStrategyReplay=function(id){
  reset();if(typeof window.showView==="function")window.showView("simulator");
  setTimeout(()=>{const panel=$("strategyReplay");if(panel)panel.scrollIntoView({behavior:"smooth",block:"start"})},80);
 };
+if(window.__MASAR_STRATEGY_SIM_TEST__){window.__MASAR_STRATEGY_SIM_TEST__={requiresTradePlan,evaluateTradePlan}}
 function init(){
  mount();const old=window.masarInitialize;
  if(typeof old==="function"&&!window.__strategyReplayWrapped){

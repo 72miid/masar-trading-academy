@@ -22,6 +22,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Run strategy simulator QA
+        run: node scripts/strategy-sim-qa.mjs
       - name: Run static and structural QA
         run: node scripts/qa.mjs
   deploy:
