@@ -44,6 +44,7 @@ const manifest=JSON.parse(readFileSync(new URL("../manifest.webmanifest",import.
 assert.equal(manifest.start_url,"./");
 const publicIndex=readFileSync(new URL("../index.html",import.meta.url),"utf8");
 for(const token of ["function simPreviewMetrics(x)","riskAtStop=risk+x.costs","rewardAtTarget=reward-x.costs","rrAfterCosts:rewardAtTarget/riskAtStop","تكاليف الدخول التقديرية","تكاليف الإغلاق الفعلية"])assert.ok(publicIndex.includes(token),"paper trade risk preview missing: "+token);
+assert.ok(publicIndex.includes("pf:closed.length?(grossLoss?grossWin/grossLoss:(grossWin>0?null:0)):null"),"paper Profit Factor is unavailable when there are no closed trades");
 assert.ok(publicIndex.includes('disabled=currentUnit===units.length-1||!state.completed.includes(currentUnit)'),"next unit button stays locked until current unit is completed");
 assert.ok(publicIndex.includes('function nextUnit(){if(!state.completed.includes(currentUnit))'),"nextUnit handler blocks progression before passing");
 assert.ok(publicIndex.includes("لا يمكنك الانتقال قبل اجتياز اختبار الوحدة بنتيجة 4/5 على الأقل."),"blocked progression explains the 4/5 pass requirement");
