@@ -77,7 +77,7 @@ function evaluateTradePlan(input){
  if(side==="sell"&&Number.isFinite(Number(input.structureHigh))&&Number.isFinite(stop)&&stop<=Number(input.structureHigh))errors.push("وقف البيع يجب أن يكون أعلى قمة البنية القريبة التي تُبطل الفكرة.");
  if(!Number.isFinite(size)||size<=0)errors.push("حجم الصفقة الافتراضي يجب أن يكون أكبر من صفر.");
  const reasonText=String(input.reason||"").trim(),cancelText=String(input.cancel||"").trim();
- const reasonEvidence=/(دعم|مقاومة|اختراق|إعادة\\s*اختبار|اتجاه|متوسط|شمعة|ارتداد|تأكيد|إغلاق|قمة|قاع|زخم|نطاق|rsi|macd|bollinger|support|resistance|breakout|retest|trend|candle|range)/i.test(reasonText);
+ const reasonEvidence=/(دعم|مقاومة|اختراق|إعادة.?اختبار|اتجاه|متوسط|شمعة|ارتداد|تأكيد|إغلاق|قمة|قاع|زخم|نطاق|rsi|macd|bollinger|support|resistance|breakout|retest|trend|candle|range)/i.test(reasonText);
  const cancelEvidence=/(إغلاق|كسر|اختراق|فشل|عودة|تجاوز|منطقة|مستوى|قمة|قاع|إبطال|شمعة|close|break|invalid|level|zone|below|above)/i.test(cancelText);
  if(reasonText.length<12)errors.push("اكتب سبب دخول واضحاً لا يقل عن 12 حرفاً.");
  else if(!reasonEvidence)errors.push("اذكر إشارة فنية محددة في سبب الدخول، مثل دعم أو اختراق أو اتجاه أو شمعة تأكيد.");
