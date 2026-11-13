@@ -13,8 +13,8 @@ function makeBars(kind,seed){
  let vals=[],p=100+(seed%7)*.7;
  for(let i=0;i<34;i++){
   let d=0;
-  if(kind==="valid"){d=i<10?.12:i<17?.04:i<24?-.16:i<29?.32:.22}
-  if(kind==="false"){d=i<12?.1:i<20?.04:i<25?.35:i<30?-.48:-.22}
+  if(kind==="valid"){d=i<10?.12:i<17?.04:i<24?-.16:i<29?.32:.22;if(selected%2===1)d=-d}
+  if(kind==="false"){d=i<12?.1:i<20?.04:i<25?.35:i<30?-.48:-.22;if(selected%2===1)d=-d}
   if(kind==="range"){d=Math.sin(i*1.4+seed)*.12+(i%4===0?.04:-.02)}
   p+=d;const o=p-(Math.sin(i*2+seed)*.11),c=p+(Math.cos(i*1.3+seed)*.12),hi=Math.max(o,c)+.12+(i%3)*.025,lo=Math.min(o,c)-.1-(i%2)*.03;
   vals.push({o,h:hi,l:lo,c});
@@ -42,7 +42,20 @@ function mount(){
  $("srCheck").onclick=check;
  reset();
 }
-function reset(){revealed=8;caseData=cases[caseIndex];$("srDecision").value="";$("srReason").value="";$("srFeedback").textContent="";$("srExplanation").textContent="بعد تقييم قرارك ستظهر المراجعة التعليمية.";$("srRule").textContent="";$("srTitle").textContent=currentStrategy().name+" — "+caseData.label;draw()}
+function reset(){
+ revealed=8;caseData=cases[caseIndex];$("srDecision").value="";$("srReason").value="";$("srFeedback").textContent="";
+ $("srExplanation").textContent="بعد تقييم قرارك ستظهر المراجعة التعليمية.";
+ const rules=[
+ "راقب حدود المنطقة، ورد فعل السعر، وهل ظهر إغلاق يؤكد الرفض أو الكسر. لا تعتبر اللمس وحده إشارة.",
+ "راقب إغلاقاً خارج النطاق ثم عودة لاختبار المستوى من الجهة الأخرى. لا تطارد أول شمعة اختراق.",
+ "راقب تسلسل القمم والقيعان واتجاه السياق، ثم انتظر تصحيحاً لا يبطل البنية قبل التفكير بالدخول.",
+ "راقب اتجاه المتوسطات وموقع السعر والتراجع إليها، ولا تعتبر مجرد لمس المتوسط تأكيداً.",
+ "راقب توافق شروط المؤشرات مع حركة السعر والإطار الأعلى. قراءة مؤشر منفرد لا تكفي.",
+ "راقب إغلاق نموذج الشمعة قرب حد النطاق، ولا تصنّف الشمعة قبل اكتمالها."
+ ];
+ $("srRule").textContent="قاعدة المراقبة: "+rules[selected%rules.length];
+ $("srTitle").textContent=currentStrategy().name+" — "+caseData.label;draw()
+}
 function draw(){
  const canvas=$("srChart");if(!canvas)return;const ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height,bars=makeBars(caseData.kind,selected*13+caseIndex*5+3),shown=bars.slice(0,revealed);
  ctx.clearRect(0,0,w,h);ctx.strokeStyle="#26384e";ctx.lineWidth=1;
@@ -57,7 +70,7 @@ function draw(){
 function check(){
  if(revealed<34){$("srFeedback").textContent="أكمل كشف الشموع أولاً حتى لا تحكم من بيانات ناقصة.";return}
  const decision=$("srDecision").value;if(!decision){$("srFeedback").textContent="اختر قرارك أولاً.";return}
- const expected=caseData.expected,ok=decision===expected;
+ const expected=caseData.kind==="valid"?(selected%2===0?"buy":"sell"):caseData.expected,ok=decision===expected;
  const key=currentStrategy().id+"_"+caseIndex;
  completed[key]={ok,decision,at:new Date().toISOString(),reason:$("srReason").value.slice(0,500)};
  try{localStorage.setItem("masar_strategy_replay_v1",JSON.stringify(completed))}catch{}
