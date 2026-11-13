@@ -203,6 +203,7 @@ function downloadFile(name,data,type){let b=new Blob([data],{type}),u=URL.create
 function renderGlossary(){let s=(document.getElementById("glossSearch").value||"").toLowerCase();document.getElementById("glossary").innerHTML=glossaryItems.filter(x=>(x[0]+" "+x[1]).toLowerCase().includes(s)).map(x=>'<div class="term"><b>'+x[0]+'</b><div class="small">'+x[1]+'</div></div>').join("")||'<p class="muted">لا توجد نتائج.</p>'}
 function renderPlan(){document.getElementById("planGrid").innerHTML=plan.map(x=>'<div class="card"><div class="eyebrow">'+x[0]+'</div><h3>'+x[1]+'</h3><p class="muted">'+x[2]+'</p></div>').join("")}
 if("serviceWorker" in navigator && location.protocol!=="file:"){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}))}
+window.masarReloadProgressFromStorage=function(){state=loadState();paperTrades=paperLoad()};
 window.masarInitialize=function(data){
  units=data.units;
  lessonVisuals=data.lessonVisuals;
@@ -222,6 +223,7 @@ window.masarInitialize=function(data){
 <a id="gateAccountLink" href="./account.html" style="display:inline-block;background:#d8b56c;color:#17202b;padding:10px 16px;border-radius:10px;font-weight:800;text-decoration:none">تسجيل الدخول / إدارة الحساب</a>
 <p style="color:#b0bdcc;font-size:13px;margin-top:20px">الوصول متاح للحسابات ذات الاشتراك الفعّال وبعد تغيير كلمة المرور المؤقتة.</p></section>
 <script src="./assets/masar-config.js"></script>
+<script src="./assets/masar-progress-sync.js"></script>
 <script>
 (async()=>{
  const gate=document.getElementById("accessGate"),app=document.getElementById("academyApp"),message=document.getElementById("gateMessage"),cfg=window.MASAR_CONFIG||{},raw=sessionStorage.getItem("masar_auth_session");
@@ -236,6 +238,12 @@ window.masarInitialize=function(data){
   const content=await fetch(base+"/functions/v1/masar-content",{method:"POST",headers,body:"{}"});
   const data=await content.json().catch(()=>({}));
   if(!content.ok)throw new Error(data.error==="subscription_inactive"?"انتهى اشتراكك أو لا يوجد اشتراك فعّال.": "تعذر تحميل المحتوى المحمي. حاول تسجيل الدخول مجدداً.");
+  try{
+   if(window.MASARProgressSync)await window.MASARProgressSync.initialize(session.access_token);
+  }catch(syncError){console.warn("MASAR progress sync unavailable",syncError);if(window.MASARProgressSync?.showError)window.MASARProgressSync.showError(syncError.message)}
+  if(typeof window.masarReloadProgressFromStorage==="function")window.masarReloadProgressFromStorage();
+  if(typeof window.masarReloadStrategyProgress==="function")window.masarReloadStrategyProgress();
+  if(typeof window.masarReloadCurriculumLabProgress==="function")window.masarReloadCurriculumLabProgress();
   window.masarInitialize(data);
   gate.classList.add("hide");app.classList.remove("hide");
  }catch(e){message.textContent=e.message}

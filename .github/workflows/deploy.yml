@@ -24,6 +24,8 @@ jobs:
           node-version: 22
       - name: Run strategy simulator QA
         run: node scripts/strategy-sim-qa.mjs
+      - name: Run learner progress sync QA
+        run: node scripts/progress-sync-qa.mjs
       - name: Run static and structural QA
         run: node scripts/qa.mjs
   deploy:

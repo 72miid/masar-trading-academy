@@ -144,6 +144,7 @@ function renderScore(){
  $("srScore").textContent=done+" / "+total+" سيناريو · "+correct+" قرارات متوافقة · "+points+" نقطة";
  $("srHistory").textContent=done?"محاولات محفوظة: "+done+" · المتبقي: "+(total-done):"لم تُسجّل محاولات بعد.";
 }
+window.masarReloadStrategyProgress=function(){try{completed=JSON.parse(localStorage.getItem("masar_strategy_replay_v1")||"{}")}catch{completed={}}renderScore()};
 window.openStrategyReplay=function(id){
  const index=strategies.findIndex(x=>x.id===id);if(index<0)return;
  selected=index;caseIndex=0;

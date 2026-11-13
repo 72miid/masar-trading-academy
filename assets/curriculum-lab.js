@@ -52,6 +52,7 @@ $("mplExportLog").onclick=()=>download(db.analyses||[],"masar-analysis-log.csv")
 function renderLog(){$("mplLog").innerHTML=(db.analyses||[]).length?"<table><thead><tr><th>التاريخ</th><th>شموع ظاهرة</th><th>التصنيف</th><th>السيناريو</th></tr></thead><tbody>"+db.analyses.slice().reverse().map(x=>"<tr><td>"+esc(x.time)+"</td><td>"+x.visible+"</td><td>"+esc(x.bias)+"</td><td>"+esc(x.text)+"</td></tr>").join("")+"</tbody></table>":"<p>لا توجد تحليلات.</p>"}
 renderLog();score();if(db.result)renderResult(db.result)
 }
+window.masarReloadCurriculumLabProgress=function(){try{db=JSON.parse(localStorage.getItem(K)||"{}")}catch{db={}}renderLog();score();if(db.result)renderResult(db.result)};
 function activate(){document.querySelectorAll(".view").forEach(x=>x.classList.toggle("active",x.id==="masarPracticeView"));document.querySelectorAll(".nav button").forEach(x=>x.classList.toggle("active",x.dataset.view==="masarPractice"));window.scrollTo({top:0,behavior:"smooth"})}
 if(window.__MASAR_TEST__){window.__MASAR_TEST_API__={csvParse,stats,calculatePositionSize,run:(data,start,end,r)=>{bars=data;return runSegment(start,end,r)},sample};}
 function init(){mount();document.addEventListener("click",e=>{if(e.target.closest("[data-view='masarPractice']"))activate()});if(window.masarInitialize){const old=window.masarInitialize;window.masarInitialize=function(d){old(d);mount()}}}
