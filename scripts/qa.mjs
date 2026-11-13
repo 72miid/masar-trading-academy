@@ -39,6 +39,9 @@ assert.ok(adminFunction.includes('"Access-Control-Allow-Origin":"https://72miid.
 const migration=readFileSync(new URL("../supabase/migrations/202611120001_masar_accounts_subscriptions.sql",import.meta.url),"utf8");
 for(const token of ["enable row level security","subscription_select_own","payment_webhook_events","handle_new_user","provider_subscription_id","admin_users"])assert.ok(migration.includes(token),"database security/schema missing: "+token);
 const adminGrantMigration=readFileSync(new URL("../supabase/migrations/20261113115108_grant_service_role_admin_membership_read.sql",import.meta.url),"utf8");
+const profileGrantMigration=readFileSync(new URL("../supabase/migrations/202611140002_service_role_profile_access.sql",import.meta.url),"utf8");
+assert.ok(profileGrantMigration.includes("grant select on table public.profiles to service_role"),"service role must read member profile names");
+assert.ok(profileGrantMigration.includes("grant update (display_name, updated_at) on table public.profiles to service_role"),"service role must update member profile names");
 assert.ok(adminGrantMigration.includes("grant select on table public.admin_users to service_role"),"service role must be able to verify admin membership");
 const config=readFileSync(new URL("../assets/masar-config.js",import.meta.url),"utf8");
 assert.ok(/supabaseUrl:\s*"https:\/\/[a-z0-9-]+\.supabase\.co"/i.test(config)&&/supabaseAnonKey:\s*"[^"]{20,}"/.test(config),"public Supabase browser config exists");
