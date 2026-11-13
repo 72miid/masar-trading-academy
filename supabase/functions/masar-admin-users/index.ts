@@ -20,8 +20,9 @@ Deno.serve(async(req)=>{
  if(body.action==="list_users"){
   const {data:rows,error}=await db.from("subscriptions").select("user_id,status,current_period_start,current_period_end").eq("provider","manual").order("created_at",{ascending:false}).limit(200);
   if(error){console.error("admin_list_query_failed",error.code||"unknown",error.message||"");return out({error:"list_failed",code:error.code||"unknown",message:error.message||"Database query failed"},500);}
-  const users=[];
-  for(const row of rows||[]){const {data,error}=await db.auth.admin.getUserById(row.user_id);if(!error&&data.user)users.push({id:data.user.id,email:data.user.email,status:row.status,current_period_start:row.current_period_start,current_period_end:row.current_period_end});}
+  const users=[],profileNames=new Map<string,string>();
+  if((rows||[]).length){const {data:profiles,error:profileError}=await db.from("profiles").select("id,display_name").in("id",rows.map((row:any)=>row.user_id));if(profileError){console.error("admin_profile_list_failed",profileError.code||"unknown");return out({error:"profile_list_failed"},500)}for(const profile of profiles||[])profileNames.set(profile.id,profile.display_name||"");}
+  for(const row of rows||[]){const {data,error}=await db.auth.admin.getUserById(row.user_id);if(!error&&data.user)users.push({id:data.user.id,email:data.user.email,display_name:profileNames.get(data.user.id)||"",status:row.status,current_period_start:row.current_period_start,current_period_end:row.current_period_end});}
   return out({users});
  }
  if(body.action==="set_access"){
@@ -61,14 +62,23 @@ Deno.serve(async(req)=>{
   if(updateError||!updated.user){console.error("admin_password_reset_failed",updateError?.message||"unknown");return out({error:"password_reset_failed"},400);}
   return out({reset:true,user:{id:updated.user.id,email:updated.user.email},temporary_password:tempPassword,must_change_password:true});
  }
+ if(body.action==="set_display_name"){
+  const userId=String(body.user_id||""),displayName=String(body.display_name||"").trim().slice(0,80);
+  if(!/^[0-9a-f-]{36}$/i.test(userId)||displayName.length<2)return out({error:"invalid_input"},400);
+  const {data:userData,error:userError}=await db.auth.admin.getUserById(userId);
+  if(userError||!userData.user)return out({error:"user_not_found"},404);
+  const {error}=await db.from("profiles").update({display_name:displayName,updated_at:new Date().toISOString()}).eq("id",userId);
+  if(error){console.error("admin_profile_update_failed",error.code||"unknown");return out({error:"profile_update_failed"},500)}
+  return out({updated:true,user_id:userId,display_name:displayName});
+ }
  if(body.action==="create_user"){
-  const email=String(body.email||"").trim().toLowerCase(),days=Number(body.days);
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!Number.isInteger(days)||days<1||days>3650)return out({error:"invalid_input"},400);
+  const email=String(body.email||"").trim().toLowerCase(),displayName=String(body.display_name||"").trim().slice(0,80),days=Number(body.days);
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||displayName.length<2||!Number.isInteger(days)||days<1||days>3650)return out({error:"invalid_input"},400);
   const pick=(chars:string)=>chars[crypto.getRandomValues(new Uint32Array(1))[0]%chars.length];
   const chars=[...Array.from({length:5},()=>pick("abcdefghijkmnopqrstuvwxyz")),...Array.from({length:5},()=>pick("ABCDEFGHJKLMNPQRSTUVWXYZ")),...Array.from({length:6},()=>pick("23456789"))];
   for(let i=chars.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[chars[i],chars[j]]=[chars[j],chars[i]];}
   const tempPassword=chars.join("");
-  const {data,error}=await db.auth.admin.createUser({email,password:tempPassword,email_confirm:true,app_metadata:{must_change_password:true}});
+  const {data,error}=await db.auth.admin.createUser({email,password:tempPassword,email_confirm:true,user_metadata:{display_name:displayName},app_metadata:{must_change_password:true}});
   if(error||!data.user)return out({error:error?.message||"user_creation_failed"},400);
   const end=new Date(Date.now()+days*86400000).toISOString();
   const sub={user_id:data.user.id,provider:"manual",provider_subscription_id:"manual:"+data.user.id,status:"active",current_period_start:new Date().toISOString(),current_period_end:end,cancel_at_period_end:false,updated_at:new Date().toISOString()};
