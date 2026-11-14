@@ -34,6 +34,7 @@ function score(){let n=0,parts=[];document.querySelectorAll("[data-mpl-r]").forE
 function download(rows,name){if(!rows?.length){alert("لا توجد بيانات للتصدير.");return}const keys=Object.keys(rows[0]),s=[keys.join(","),...rows.map(r=>keys.map(k=>'"'+String(r[k]??"").replace(/"/g,'""')+'"').join(","))].join("\r\n"),a=document.createElement("a"),u=URL.createObjectURL(new Blob(["\uFEFF"+s],{type:"text/csv"}));a.href=u;a.download=name;a.click();URL.revokeObjectURL(u)}
 function resultFingerprint(data,r){const raw=JSON.stringify({bars:data.map(z=>[z.time,z.open,z.high,z.low,z.close]),rules:r}),str=raw;let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return "fnv1a-"+(h>>>0).toString(16).padStart(8,"0")}
 function invalidateResult(message){if(db.result){delete db.result;try{localStorage.setItem(K,JSON.stringify(db))}catch{}}if($("mplResults"))$("mplResults").innerHTML=message?"<p class='mpl-note'>"+esc(message)+"</p>":"";if($("mplTrades"))$("mplTrades").innerHTML=""}
+function renderLog(){$("mplLog").innerHTML=(db.analyses||[]).length?"<table><thead><tr><th>التاريخ</th><th>شموع ظاهرة</th><th>التصنيف</th><th>السيناريو</th></tr></thead><tbody>"+db.analyses.slice().reverse().map(x=>"<tr><td>"+esc(x.time)+"</td><td>"+x.visible+"</td><td>"+esc(x.bias)+"</td><td>"+esc(x.text)+"</td></tr>").join("")+"</tbody></table>":"<p>لا توجد تحليلات.</p>"}
 function bind(){
 $("mplFile").onchange=async e=>{try{bars=csvParse(await e.target.files[0].text());visible=Math.min(60,bars.length);invalidateResult("تم تغيير بيانات السوق. أُزيلت نتائج التشغيل السابق؛ شغّل الاختبار مجدداً.");$("mplDataStatus").textContent="تم تحميل "+bars.length+" شمعة. راجع المصدر والمنطقة الزمنية ونوع السعر.";chart()}catch(x){$("mplDataStatus").textContent=x.message}};
 $("mplSample").onclick=()=>{bars=sample();visible=60;invalidateResult("تم تغيير بيانات السوق إلى بيانات اصطناعية. أُزيلت نتائج التشغيل السابق.");$("mplDataStatus").textContent="بيانات اصطناعية للتجربة فقط؛ لا تمثل السوق.";chart()};
@@ -49,7 +50,6 @@ $("mplSize").onclick=()=>{try{const x=calculatePositionSize({capital:+$("mplCapi
 $("mplRubric").innerHTML=rubric.map((x,i)=>"<label>"+x[0]+" ("+x[1]+")</label><input type='number' min='0' max='"+x[1]+"' value='"+(db.rubric?.[i]||0)+"' data-mpl-r='"+i+"'>").join("");$("mplRubric").oninput=score;
 $("mplSaveRubric").onclick=()=>{db.rubric=[...document.querySelectorAll("[data-mpl-r]")].map(x=>+x.value||0);save();score()};
 $("mplExportLog").onclick=()=>download(db.analyses||[],"masar-analysis-log.csv");
-function renderLog(){$("mplLog").innerHTML=(db.analyses||[]).length?"<table><thead><tr><th>التاريخ</th><th>شموع ظاهرة</th><th>التصنيف</th><th>السيناريو</th></tr></thead><tbody>"+db.analyses.slice().reverse().map(x=>"<tr><td>"+esc(x.time)+"</td><td>"+x.visible+"</td><td>"+esc(x.bias)+"</td><td>"+esc(x.text)+"</td></tr>").join("")+"</tbody></table>":"<p>لا توجد تحليلات.</p>"}
 renderLog();score();if(db.result)renderResult(db.result)
 }
 window.masarReloadCurriculumLabProgress=function(){try{db=JSON.parse(localStorage.getItem(K)||"{}")}catch{db={}}renderLog();score();if(db.result)renderResult(db.result)};
