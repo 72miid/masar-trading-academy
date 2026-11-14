@@ -77,6 +77,8 @@ assert.ok(sw.includes("assets/curriculum-lab.js"),"practical lab is precached");
 assert.ok(sw.includes("assets/masar-strategy-sim.js"),"strategy simulator is precached");
 const lab=readFileSync(new URL("../assets/curriculum-lab.js",import.meta.url),"utf8");
 new vm.Script(lab,{filename:"curriculum-lab.js"});
+const renderLogAt=lab.indexOf("function renderLog()"),bindAt=lab.indexOf("function bind(){"),restoreAt=lab.indexOf("window.masarReloadCurriculumLabProgress=function()");
+assert.ok(renderLogAt>=0&&bindAt>renderLogAt&&restoreAt>bindAt,"curriculum lab log renderer must be in the outer closure so cloud progress restoration can call it");
 const testWindow={__MASAR_TEST__:true};
 const testDocument={readyState:"loading",addEventListener(){}};
 const testStorage={getItem(){return null},setItem(){}};
