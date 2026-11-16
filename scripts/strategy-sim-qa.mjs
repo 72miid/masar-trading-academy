@@ -3,9 +3,11 @@ import vm from "node:vm";
 import assert from "node:assert/strict";
 
 const source = readFileSync(new URL("../assets/masar-strategy-sim.js", import.meta.url), "utf8");
+const saved = new Map();
+const localStorage = { getItem(key) { return saved.get(key) ?? null; }, setItem(key, value) { saved.set(key, String(value)); } };
+const nodes = { srScore: { textContent: "" }, srHistory: { textContent: "" } };
+const document = { readyState: "loading", addEventListener() {}, getElementById(id) { return nodes[id] || null; } };
 const window = { __MASAR_STRATEGY_SIM_TEST__: true };
-const document = { readyState: "loading", addEventListener() {} };
-const localStorage = { getItem() { return null; }, setItem() {} };
 vm.runInNewContext(source, { window, document, localStorage, Date, Math, JSON, String, Number, Object, Array }, { timeout: 2000 });
 
 const api = window.__MASAR_STRATEGY_SIM_TEST__;
@@ -13,6 +15,26 @@ assert.ok(api, "simulator exposes a test-only API");
 assert.equal(api.requiresTradePlan("trade"), true, "trade decisions require a plan");
 assert.equal(api.requiresTradePlan("wait"), false, "wait decisions do not require a plan");
 assert.equal(api.requiresTradePlan("skip"), false, "skip decisions do not require a plan");
+const cleanedReplay = api.cleanCompletedForTest({
+  "sr-zones_0": { ok: true, decision: "wait", score: 100 },
+  "sr-zones_3": { ok: true, decision: "wait", score: 100 },
+  "unknown_0": { ok: true, decision: "wait", score: 100 },
+  "sr-zones_1": { ok: true, decision: "wait", score: 101 },
+  "sr-zones_2": { ok: "yes", decision: "wait", score: 100 }
+});
+assert.deepEqual(Object.keys(cleanedReplay), ["sr-zones_0"], "malformed and out-of-range replay records are excluded from the 18 valid scenarios");
+api.recordAttemptForTest("sr-zones_0", { ok: true, decision: "trade", score: 92, at: "2026-11-16T12:00:00Z" });
+const savedReplay = JSON.parse(localStorage.getItem("masar_strategy_replay_v1"));
+assert.equal(savedReplay["sr-zones_0"].score, 92, "a completed strategy replay is persisted under its strategy/scenario key");
+const restoredNodes = { srScore: { textContent: "" }, srHistory: { textContent: "" } };
+const restoredWindow = {};
+const restoredDocument = { readyState: "loading", addEventListener() {}, getElementById(id) { return restoredNodes[id] || null; } };
+vm.runInNewContext(source, { window: restoredWindow, document: restoredDocument, localStorage, Date, Math, JSON, String, Number, Object, Array }, { timeout: 2000 });
+restoredWindow.masarReloadStrategyProgress();
+assert.match(restoredNodes.srScore.textContent, /1 \/ 18 سيناريو · 1 قرارات متوافقة · 92 نقطة/, "a page reload restores the saved simulator attempt and score");
+localStorage.setItem = () => { throw new Error("storage full"); };
+assert.equal(api.recordAttemptForTest("sr-zones_1", { ok: false, decision: "skip", score: 0 }), false, "storage failures are reported instead of appearing to save");
+assert.ok(source.includes("تعذر حفظ المحاولة على هذا الجهاز"), "the simulator explains when local persistence fails");
 
 for (let i = 0; i < 6; i++) {
   const validBars = api.scenarioBars(i, 0);
@@ -79,4 +101,4 @@ assert.equal(distantEntry.valid, false, "rejects an entry price too far from the
 const invalidPrices = api.evaluateTradePlan({ ...completeLong, entry: 0 });
 assert.equal(invalidPrices.valid, false, "rejects non-positive price values");
 
-console.log("MASAR strategy simulator QA passed: plan requirement, long/short geometry, direction, distances, R:R, size, rationale, invalidation, warnings, and entry proximity.");
+console.log("MASAR strategy simulator QA passed: plan requirement, long/short geometry, direction, distances, R:R, size, rationale, invalidation, warnings, entry proximity, sanitized 18-scenario state, persistence, and reload restoration.");

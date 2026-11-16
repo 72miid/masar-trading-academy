@@ -48,7 +48,7 @@ $("mplExportTrades").onclick=()=>download(db.result?.test?.trades||[],"masar-bac
 ["mplName","mplN","mplRR","mplCost","mplPV","mplSlip"].forEach(id=>$(id).addEventListener("input",()=>invalidateResult("تغيّرت قواعد الاستراتيجية. أعد تثبيت القواعد وتشغيل الاختبار قبل الاعتماد.")));
 $("mplSize").onclick=()=>{try{const x=calculatePositionSize({capital:+$("mplCapital").value,riskPct:+$("mplRisk").value,stopDistance:+$("mplDist").value,valuePerUnit:+$("mplContract").value,extraCost:+$("mplExtra").value,minLot:+$("mplMinLot").value,lotStep:+$("mplLotStep").value,maxLot:+$("mplMaxLot").value});$("mplSizeResult").textContent="حد المخاطرة: "+x.budget.toFixed(2)+" · خسارة العقد الواحد المقدّرة: "+x.perLot.toFixed(4)+" · الحجم النظري: "+x.rawLots.toFixed(6)+" · الحجم بعد التقريب: "+x.lots.toFixed(6)+" عقد · المخاطرة الفعلية المقدّرة: "+x.actualRisk.toFixed(2)+" ("+x.actualPct.toFixed(3)+"%) · المتبقي من حد المخاطرة: "+x.remaining.toFixed(2)+(x.reason?" · "+x.reason:"");}catch(e){$("mplSizeResult").textContent=e.message}};
 $("mplRubric").innerHTML=rubric.map((x,i)=>"<label>"+x[0]+" ("+x[1]+")</label><input type='number' min='0' max='"+x[1]+"' value='"+(db.rubric?.[i]||0)+"' data-mpl-r='"+i+"'>").join("");$("mplRubric").oninput=score;
-$("mplSaveRubric").onclick=()=>{db.rubric=[...document.querySelectorAll("[data-mpl-r]")].map(x=>+x.value||0);save();score()};
+$("mplSaveRubric").onclick=()=>{db.rubric=[...document.querySelectorAll("[data-mpl-r]")].map(x=>+x.value||0);db.rubricUpdatedAt=new Date().toISOString();save();score()};
 $("mplExportLog").onclick=()=>download(db.analyses||[],"masar-analysis-log.csv");
 renderLog();score();if(db.result)renderResult(db.result)
 }

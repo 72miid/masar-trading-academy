@@ -4,6 +4,7 @@ let strategies=[],selected=0,caseIndex=0,revealed=20,caseData=null,completed={};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const ids=["sr-zones","break-retest","trend-follow","ma-pullback","indicators","candles-range"];
+const replayKeys=new Set(ids.flatMap(id=>[0,1,2].map(index=>id+"_"+index)));
 const fallbackNames=["الدعم والمقاومة","الاختراق وإعادة الاختبار","اتباع الاتجاه","المتوسط المتحرك والتراجع","RSI وMACD وBollinger Bands","الشموع الانعكاسية والتداول داخل النطاق"];
 const cases=[
  {kind:"valid",label:"فرصة تستوفي الشروط",expected:"trade",expectedSide:"buy",why:"تكوّن الشرط المحدد في هذه الاستراتيجية قبل نقطة القرار. كان يمكن إعداد صفقة افتراضية بعد تحديد نقطة الإبطال والحجم، وليس الدخول العشوائي."},
@@ -49,7 +50,7 @@ function mount(){
  view.insertBefore(box,view.firstChild);
  $("srDecision").addEventListener("change",syncPlanFields);["srSide","srEntry","srStop","srTarget","srSize"].forEach(id=>$(id).addEventListener("input",previewPlan));
  const sel=$("srStrategy");sel.innerHTML=(strategies.length?strategies:ids.map((id,i)=>({id,name:fallbackNames[i]}))).map((x,i)=>'<option value="'+i+'">'+esc(x.name)+'</option>').join("");
- try{completed=JSON.parse(localStorage.getItem("masar_strategy_replay_v1")||"{}")}catch{completed={}}
+ completed=readCompleted();
  sel.addEventListener("change",()=>{selected=+sel.value;reset()});
  $("srCase").addEventListener("change",()=>{caseIndex=+$("srCase").value;reset()});
  $("srNext").onclick=()=>{if(revealed<24){revealed++;draw()}};
@@ -65,6 +66,10 @@ const rules=[
  "الشموع والنطاق: حدد الحد أولاً، وانتظر إغلاق نموذج الشمعة قربه؛ لا تحكم قبل اكتمال الشمعة."
 ];
 function requiresTradePlan(decision){return decision==="trade"}
+function persistCompleted(){try{localStorage.setItem("masar_strategy_replay_v1",JSON.stringify(completed));return true}catch{return false}}
+function cleanCompleted(value){if(!value||typeof value!=="object"||Array.isArray(value))return {};const clean={};for(const [key,attempt] of Object.entries(value)){if(!replayKeys.has(key)||!attempt||typeof attempt!=="object"||Array.isArray(attempt)||typeof attempt.ok!=="boolean"||!["trade","wait","skip"].includes(attempt.decision)||!Number.isInteger(attempt.score)||attempt.score<0||attempt.score>100)continue;clean[key]=attempt}return clean}
+function readCompleted(){try{return cleanCompleted(JSON.parse(localStorage.getItem("masar_strategy_replay_v1")||"{}"))}catch{return {}}}
+function recordAttempt(key,attempt){if(!replayKeys.has(key))return false;const valid=cleanCompleted({[key]:attempt})[key];if(!valid)return false;completed={...completed,[key]:valid};return persistCompleted()}
 function evaluateTradePlan(input){
  const errors=[],warnings=[];
  const side=input.side,entry=Number(input.entry),stop=Number(input.stop),target=Number(input.target),size=Number(input.size),reference=Number(input.referencePrice),range=Number(input.averageRange);
@@ -130,10 +135,9 @@ function check(){
  if(requiresTradePlan(decision)){plan=readPlan();planReview=evaluateTradePlan(plan);if(!planReview.valid){$("srFeedback").textContent="لا يمكن تثبيت الخطة بعد. "+planReview.errors.join(" ");$("srFeedback").style.color="var(--red)";return}plan={side:plan.side,entry:Number(plan.entry),stop:Number(plan.stop),target:Number(plan.target),size:Number(plan.size),reason:plan.reason.trim(),cancel:plan.cancel.trim(),riskDistance:planReview.riskDistance,rewardDistance:planReview.rewardDistance,riskReward:planReview.riskReward,score:planReview.score,warnings:planReview.warnings}}
  const expected=caseData.expected,ok=decision===expected,key=currentStrategy().id+"_"+caseIndex;
  const score=decision==="trade"?(ok?Math.round(20+planReview.score*.8):Math.round(planReview.score*.4)):(ok?100:0);
- completed[key]={ok,decision,score,at:new Date().toISOString(),reason:$("srReason").value.slice(0,500),plan};
- try{localStorage.setItem("masar_strategy_replay_v1",JSON.stringify(completed))}catch{}
  revealed=34;draw();
- $("srFeedback").textContent=(ok?"قرارك متوافق مع قواعد السيناريو. ":"القرار لا يطابق الاختيار المتوقع لهذا السيناريو. ")+(plan?"درجة القرار والخطة: "+score+"/100. نسبة العائد إلى المخاطرة "+plan.riskReward.toFixed(2)+":1."+(plan.warnings.length?" ملاحظة: "+plan.warnings.join(" "):""):"لم تكن هناك حاجة إلى خطة صفقة؛ الانتظار أو التجاوز لا يتطلبان إدخال أسعار.");
+ const saved=recordAttempt(key,{ok,decision,score,at:new Date().toISOString(),reason:$("srReason").value.slice(0,500),plan});
+ $("srFeedback").textContent=(ok?"قرارك متوافق مع قواعد السيناريو. ":"القرار لا يطابق الاختيار المتوقع لهذا السيناريو. ")+(plan?"درجة القرار والخطة: "+score+"/100. نسبة العائد إلى المخاطرة "+plan.riskReward.toFixed(2)+":1."+(plan.warnings.length?" ملاحظة: "+plan.warnings.join(" "):""):"لم تكن هناك حاجة إلى خطة صفقة؛ الانتظار أو التجاوز لا يتطلبان إدخال أسعار.")+(saved?"":" تعذر حفظ المحاولة على هذا الجهاز؛ صدّر بياناتك أو تحقق من مساحة التخزين.");
  $("srFeedback").style.color=ok?"var(--green)":"var(--red)";
  $("srExplanation").textContent=caseData.why+(plan?"\n\nمراجعة الخطة: مسافة المخاطرة السعرية "+plan.riskDistance.toFixed(5)+"، ومسافة الهدف "+plan.rewardDistance.toFixed(5)+". حجم الصفقة الافتراضي "+plan.size+" وحدة. التقييم لا يحسب خسارة أو ربحاً نقدياً.":"");
  $("srRule").textContent="القاعدة: "+rules[selected]+" التقييم يراجع الالتزام بالاتجاه والهندسة السعرية وجودة التوثيق؛ ولا يمثل عائداً مالياً.";
@@ -144,7 +148,7 @@ function renderScore(){
  $("srScore").textContent=done+" / "+total+" سيناريو · "+correct+" قرارات متوافقة · "+points+" نقطة";
  $("srHistory").textContent=done?"محاولات محفوظة: "+done+" · المتبقي: "+(total-done):"لم تُسجّل محاولات بعد.";
 }
-window.masarReloadStrategyProgress=function(){try{completed=JSON.parse(localStorage.getItem("masar_strategy_replay_v1")||"{}")}catch{completed={}}renderScore()};
+window.masarReloadStrategyProgress=function(){completed=readCompleted();renderScore()};
 window.openStrategyReplay=function(id){
  const index=strategies.findIndex(x=>x.id===id);if(index<0)return;
  selected=index;caseIndex=0;
@@ -153,7 +157,7 @@ window.openStrategyReplay=function(id){
  reset();if(typeof window.showView==="function")window.showView("simulator");
  setTimeout(()=>{const panel=$("strategyReplay");if(panel)panel.scrollIntoView({behavior:"smooth",block:"start"})},80);
 };
-if(window.__MASAR_STRATEGY_SIM_TEST__){window.__MASAR_STRATEGY_SIM_TEST__={requiresTradePlan,evaluateTradePlan,scenarioBars(strategyIndex,scenarioIndex){const previous={selected,caseIndex,caseData};selected=strategyIndex;caseIndex=scenarioIndex;caseData=cases[scenarioIndex];const bars=pathFor();selected=previous.selected;caseIndex=previous.caseIndex;caseData=previous.caseData;return bars}}}
+if(window.__MASAR_STRATEGY_SIM_TEST__){window.__MASAR_STRATEGY_SIM_TEST__={requiresTradePlan,evaluateTradePlan,recordAttemptForTest:recordAttempt,cleanCompletedForTest:cleanCompleted,scenarioBars(strategyIndex,scenarioIndex){const previous={selected,caseIndex,caseData};selected=strategyIndex;caseIndex=scenarioIndex;caseData=cases[scenarioIndex];const bars=pathFor();selected=previous.selected;caseIndex=previous.caseIndex;caseData=previous.caseData;return bars}}}
 function init(){
  mount();const old=window.masarInitialize;
  if(typeof old==="function"&&!window.__strategyReplayWrapped){

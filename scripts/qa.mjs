@@ -8,23 +8,49 @@ assert.ok(scripts.length>0,"inline application script exists");
 for(const [i,code] of scripts.entries())new vm.Script(code,{filename:"inline-"+i+".js"});
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);
 assert.equal(ids.length,new Set(ids).size,"HTML IDs must be unique");
+const repoRoot=new URL("../",import.meta.url);
+for(const [file,source] of [["index.html",html],["account.html",readFileSync(new URL("../account.html",import.meta.url),"utf8")],["admin.html",readFileSync(new URL("../admin.html",import.meta.url),"utf8")]]){
+ for(const [,reference] of source.matchAll(/\b(?:src|href)="([^"]+)"/g)){
+  if(!reference.startsWith("./")||reference.startsWith("//"))continue;
+  const localPath=reference.split(/[?#]/,1)[0];
+  assert.ok(existsSync(new URL(localPath,repoRoot)),`${file} references an existing local file: ${reference}`);
+ }
+}
 for(const token of ['data-view="simulator"','id="simulatorView"','function openPaperTrade()','function closePaperTrade()','function paperMetrics()','function runMasarCoach()','function exportMasarBackup()','async function importMasarBackup(ev)','masar_paper_v1','masar_marketlab_v1','manifest.webmanifest','serviceWorker.register']){
 assert.ok(html.includes(token),"required feature missing: "+token);
 }
 assert.ok(html.includes('src="./assets/masar-progress-sync.js"'),"learner progress sync script is loaded");
+assert.ok(html.includes("يُزامن مع حسابك عند تسجيل الدخول")&&!html.includes("لا توجد حالياً حسابات مستخدمين أو مزامنة سحابية"),"learner-facing storage messages match the current account sync behavior");
+assert.ok(html.includes("masar_ex_updated_"),"exercise notes store a revision timestamp for conflict resolution");
+assert.ok(html.includes("تعذر حفظ المحاولة على هذا الجهاز")&&html.includes("تعذر حفظ الملاحظة على هذا الجهاز"),"learner progress forms report local storage failures");
 assert.ok(html.includes("MASARProgressSync.initialize(session.access_token)"),"academy initializes account-scoped cloud progress");
 assert.ok(html.includes("masarReloadProgressFromStorage"),"academy reloads state after cloud restoration");
 const progressSync=readFileSync(new URL("../assets/masar-progress-sync.js",import.meta.url),"utf8");
 new vm.Script(progressSync,{filename:"masar-progress-sync.js"});
 assert.ok(!/SUPABASE_SERVICE_ROLE_KEY|service_role|sb_secret_/i.test(progressSync),"browser progress sync contains no privileged Supabase secret");
-for(const token of ["user_progress","resolution=merge-duplicates","auth/v1/user","masar_local_owner","masar_strategy_replay_v1","masar_practice_v1"])assert.ok(progressSync.includes(token),"progress sync missing: "+token);
+for(const token of ["user_progress","updated_at=eq.","return=representation","auth/v1/user","MASARAuthSession.authorizedFetch","MASAR_PROGRESS_OWNER_MISMATCH","masar_strategy_replay_v1","masar_practice_v1","masar_ex_updated_","mergePaperTrades","mergeMarketLab","mergePractice","MAX_CONFLICT_RETRIES","MAX_RETRIES"])assert.ok(progressSync.includes(token),"progress sync missing: "+token);
 const progressMigration=readFileSync(new URL("../supabase/migrations/202611140001_user_progress.sql",import.meta.url),"utf8");
 for(const token of ["public.user_progress","references auth.users(id) on delete cascade","enable row level security","user_progress_select_own","user_progress_insert_own","user_progress_update_own","grant select, insert, update","pg_column_size(progress) <= 1048576"])assert.ok(progressMigration.includes(token),"progress migration missing: "+token);
 assert.ok(!/create table public\.(?:subscriptions|payment_webhook_events)|payment_webhook_events/i.test(progressMigration),"progress migration must not modify payment tables");
 const account=readFileSync(new URL("../account.html",import.meta.url),"utf8");
 for(const token of ["loginBtn","logoutBtn","subscriptions?select=status","sessionStorage","supabaseAnonKey","app_metadata","masar-change-password","must_change_password","changePasswordPanel","savePasswordBtn","confirmPassword","ensureLocalOwner","masar_local_owner"])assert.ok(account.includes(token),"account integration missing: "+token);
+assert.ok(account.includes('if(previous&&previous!==userId)return false')&&!account.includes('for(let i=localStorage.length-1;i>=0;i--)'),"switching accounts preserves prior local learner data instead of deleting it");
+const authSession=readFileSync(new URL("../assets/masar-auth-session.js",import.meta.url),"utf8");
+new vm.Script(authSession,{filename:"masar-auth-session.js"});
+assert.ok(authSession.includes("grant_type=refresh_token")&&authSession.includes("refresh_token: current.refresh_token"),"session manager refreshes through Supabase Auth");
+assert.ok(authSession.includes("refreshInFlight")&&authSession.includes("sessionRevision")&&authSession.includes("pending.revision === sessionRevision"),"session manager deduplicates refreshes and prevents stale refresh writes");
+assert.ok(authSession.includes("response.status !== 401")&&authSession.includes("sessionRevision !== requestRevision"),"session manager limits 401 recovery and avoids replaying a request after session replacement");
+assert.ok(authSession.includes("window.sessionStorage")&&!authSession.includes("localStorage"),"session tokens remain tab-scoped rather than in local storage");
+assert.ok(account.includes('src="./assets/masar-auth-session.js"')&&account.includes("authSession.accept(data)")&&account.includes("authSession.clear()"),"account login and logout use the shared session manager");
+const indexStart=html.indexOf("window.MASARAuthSession.getValidSession()");
+const accessCall=html.indexOf("/functions/v1/masar-access-check");
+assert.ok(indexStart>=0&&accessCall>indexStart&&html.includes("MASARAuthSession.authorizedFetch(base+\"/functions/v1/masar-access-check\""),"academy restores a valid session before checking access");
 const admin=readFileSync(new URL("../admin.html",import.meta.url),"utf8");
 for(const token of ["create_user","set_display_name","displayName","masar-admin-users","مدة الاشتراك","refreshUsers","set_access","temporary_password"])assert.ok(admin.includes(token),"admin page missing: "+token);
+assert.ok(admin.includes('src="./assets/masar-auth-session.js"')&&admin.includes("authSession.accept(d)")&&admin.includes("authSession.clear()"),"admin login and logout use the shared session manager");
+assert.ok(admin.includes('if(!sessionStorage.getItem("masar_auth_session"))return;try{session=await authSession.getValidSession();await verifyAdmin()'),"admin page restores and verifies an existing shared tab session");
+assert.ok(admin.indexOf('await invoke("whoami",{},d.access_token)')<admin.indexOf("session=authSession.accept(d)"),"admin login verifies the new token before replacing a prior session");
+assert.ok(admin.includes('if(e.code==="MASAR_SESSION_EXPIRED")authSession.clear()'),"admin page preserves a valid non-admin session when admin verification is denied");
 const adminScripts=[...admin.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(x=>x[1]).filter(x=>x.trim());
 assert.ok(adminScripts.length>0,"admin inline script exists");
 assert.ok(admin.includes('name="robots" content="noindex,nofollow"'),"admin page is excluded from search indexing");
@@ -32,6 +58,13 @@ assert.ok(account.includes('name="robots" content="noindex,nofollow"'),"account 
 for(const [i,code] of adminScripts.entries())new vm.Script(code,{filename:"admin-inline-"+i+".js"});
 const adminFunction=readFileSync(new URL("../supabase/functions/masar-admin-users/index.ts",import.meta.url),"utf8");
 for(const token of ["auth.getUser","admin_users","createUser","user_metadata","display_name","set_display_name","temporary_password","must_change_password","SUPABASE_SERVICE_ROLE_KEY","current_period_end","admin_only","list_users","set_access"])assert.ok(adminFunction.includes(token),"admin function security missing: "+token);
+assert.ok(adminFunction.indexOf("auth.getUser")<adminFunction.indexOf("await req.json()"),"admin actions are parsed only after caller authentication");
+assert.ok(adminFunction.indexOf("if(!admin)return out({error:\"admin_only\"},403)")<adminFunction.indexOf('if(body.action==="create_user")'),"admin actions require confirmed administrator membership");
+assert.ok(adminFunction.includes('if(adminTarget)return out({error:"cannot_reset_admin"},403)'),"password reset cannot target another administrator");
+assert.ok(adminFunction.includes("if(subError){await db.auth.admin.deleteUser(data.user.id);return out({error:\"subscription_creation_failed\"},500)}"),"failed account activation rolls back the newly created auth user");
+assert.ok(account.includes('authSession.clear();session=null;user=null;showSession()'),"account logout clears the shared tab session");
+assert.ok(admin.includes('authSession.clear();session=null;$("panel").classList.add("hide")'),"admin logout clears the shared tab session");
+assert.ok(!/SUPABASE_SERVICE_ROLE_KEY|service_role|sb_secret_/i.test(account+admin+html),"browser pages contain no server-side Supabase key markers");
 assert.ok(adminFunction.includes("const base=stillActive?Date.parse(existing.current_period_end):now"),"active renewals extend from current expiry");
 assert.ok(adminFunction.includes(".test(email)")&&!adminFunction.includes(String.raw`\\s`)&&!adminFunction.includes(String.raw`\\.`),"admin email validation regex uses valid single escapes");
 assert.ok(adminFunction.includes('"Cache-Control":"no-store"'),"admin responses are not cached");
@@ -62,6 +95,15 @@ assert.ok(publicIndex.includes("pf:closed.length?(grossLoss?grossWin/grossLoss:(
 assert.ok(publicIndex.includes('disabled=currentUnit===units.length-1||!state.completed.includes(currentUnit)'),"next unit button stays locked until current unit is completed");
 assert.ok(publicIndex.includes('function nextUnit(){if(!state.completed.includes(currentUnit))'),"nextUnit handler blocks progression before passing");
 assert.ok(publicIndex.includes("لا يمكنك الانتقال قبل اجتياز اختبار الوحدة بنتيجة 4/5 على الأقل."),"blocked progression explains the 4/5 pass requirement");
+const unitAccess=readFileSync(new URL("../assets/masar-unit-access.js",import.meta.url),"utf8");
+new vm.Script(unitAccess,{filename:"masar-unit-access.js"});
+assert.ok(publicIndex.includes('src="./assets/masar-unit-access.js"'),"unit access rules load before academy interactions");
+assert.ok(publicIndex.includes("MASARUnitAccess.isUnlocked(index,state.completed,units.length)"),"unit navigation delegates to prerequisite validation");
+assert.ok(publicIndex.includes("if(!unitUnlocked(i))"),"direct unit opening rejects locked units");
+assert.ok(publicIndex.includes('(unlocked?"":"disabled")'),"locked units are disabled in the curriculum list");
+assert.ok(publicIndex.includes("MASARUnitAccess.isPassingScore(score,q.length,4)"),"unit completion requires four correct answers");
+assert.ok(publicIndex.includes('if(syncError.code==="MASAR_PROGRESS_OWNER_MISMATCH")throw syncError'),"academy access is blocked when local progress belongs to another account");
+assert.ok(progressSync.includes('error.code="MASAR_PROGRESS_OWNER_MISMATCH"'),"progress owner mismatch has a distinct blocking error");
 assert.ok(!existsSync(new URL("../supabase/functions/masar-content/index.ts",import.meta.url)),"protected curriculum source must not exist in public repository");
 for(const marker of ["مقدمة الأسواق المالية","تربط الأسواق بين المشاركين الذين يرغبون في شراء الأصول وبيعها","ما المقصود بالسيولة؟","XAU/USD يعرض سعر أونصة الذهب","مفهوم السيولة"])assert.ok(!publicIndex.includes(marker),"protected course content leaked in public HTML: "+marker);
 assert.ok(publicIndex.includes("masar-content"),"protected content loader missing");
@@ -72,9 +114,22 @@ for(const token of ["auth.getUser","app_metadata","updateUserById","password.len
 const app=readFileSync(new URL("../index.html",import.meta.url),"utf8");
 for(const token of ["masar-access-check","academyApp","accessGate","sessionStorage"])assert.ok(app.includes(token),"academy access gate missing: "+token);
 const sw=readFileSync(new URL("../sw.js",import.meta.url),"utf8");
+assert.ok(sw.includes("assets/masar-unit-access.js"),"unit access rules are included in the PWA shell");
 assert.ok(/const CACHE_NAME="masar-shell-v\d+"/.test(sw),"service worker cache version is declared");
-assert.ok(sw.includes("assets/curriculum-lab.js"),"practical lab is precached");
-assert.ok(sw.includes("assets/masar-strategy-sim.js"),"strategy simulator is precached");
+for(const token of ["assets/masar-auth-session.js","assets/masar-unit-access.js","assets/masar-progress-sync.js","assets/curriculum-lab.js","assets/masar-strategy-sim.js"])assert.ok(sw.includes(token),"service worker shell is missing: "+token);
+assert.ok(sw.includes("keys.filter(key=>key!==CACHE_NAME)")&&sw.includes("self.skipWaiting()")&&sw.includes("self.clients.claim()"),"service worker removes old caches and activates the new shell promptly");
+const shellMatch=sw.match(/const APP_SHELL=(\[[^\]]*\])/);
+assert.ok(shellMatch,"service worker app shell list exists");
+for(const resource of JSON.parse(shellMatch[1]))assert.ok(existsSync(new URL(resource,repoRoot)),"service worker pre-cache resource exists: "+resource);
+assert.ok(!sw.includes('cache.put("./index.html",copy)'),"navigation responses cannot overwrite the cached academy with account/admin HTML");
+const swHandlers={};
+const cachedPages=new Map([ ["/masar/","academy-home"],["/masar/index.html","academy-index"],["/masar/account.html","account-page"],["/masar/admin.html","admin-page"] ]);
+const swSelf={location:{origin:"https://example.test",href:"https://example.test/masar/sw.js"},addEventListener(name,handler){swHandlers[name]=handler},clients:{claim(){}}};
+const swCaches={async match(request){const pathname=new URL(typeof request==="string"?request:request.url,"https://example.test/masar/").pathname;const body=cachedPages.get(pathname);return body?new Response(body):undefined}};
+vm.runInNewContext(sw,{self:swSelf,caches:swCaches,URL,Response,fetch:async()=>{throw new TypeError("offline")},Promise});
+for(const [path,expected] of [["/masar/","academy-home"],["/masar/index.html","academy-index"],["/masar/account.html","account-page"],["/masar/admin.html","admin-page"]]){
+ let result;swHandlers.fetch({request:{url:"https://example.test"+path,method:"GET",mode:"navigate"},respondWith(value){result=value}});const response=await result;assert.equal(await response.text(),expected,`offline navigation returns the cached page for ${path}`);
+}
 const lab=readFileSync(new URL("../assets/curriculum-lab.js",import.meta.url),"utf8");
 new vm.Script(lab,{filename:"curriculum-lab.js"});
 const renderLogAt=lab.indexOf("function renderLog()"),bindAt=lab.indexOf("function bind(){"),restoreAt=lab.indexOf("window.masarReloadCurriculumLabProgress=function()");
@@ -131,7 +186,8 @@ assert.equal(capped.lots,5,"position sizing respects broker maximum lot");
 assert.throws(()=>engine.calculatePositionSize({capital:100,riskPct:1,stopDistance:1,valuePerUnit:1,extraCost:0,minLot:.1,lotStep:.1,maxLot:.01}),/تحقق/,"position sizing rejects inconsistent broker lot limits");
 assert.throws(()=>engine.calculatePositionSize({capital:100,riskPct:101,stopDistance:1,valuePerUnit:1,extraCost:0,minLot:.1,lotStep:.1,maxLot:10}),/تحقق/,"position sizing rejects risk percentages above 100");
 for(const token of ["function resultFingerprint(data,r)","function invalidateResult(message)","db.result={dev:runSegment(0,a,r),val:runSegment(a,b,r),test:runSegment(b,bars.length,r),meta:","فجوات الوقف تنفذ عند الافتتاح","some(k=>db.frozen[k]!==r[k])"])assert.ok(lab.includes(token),"backtest integrity feature missing: "+token);
+assert.ok(lab.includes('db.rubricUpdatedAt=new Date().toISOString()'),"practical-lab rubric revisions carry a conflict-resolution timestamp");
 for(const token of ["masarPracticeView","function csvParse","function runSegment","function calculatePositionSize","mplMinLot","mplLotStep","mplMaxLot","mplRun","mplRubric","60%","الاختبار النهائي"])assert.ok(lab.includes(token),"practical lab feature missing: "+token);
 assert.ok(publicIndex.includes("assets/curriculum-lab.js"),"practical lab loader missing from academy");
 new vm.Script(sw,{filename:"sw.js"});
-console.log("MASAR QA passed: inline JS syntax, service worker syntax, unique IDs, core features, 6 strategies, 16 lab checks, PWA manifest.");
+console.log("MASAR QA passed: inline/service-worker syntax, unique IDs, local files, offline navigation fallbacks, core features, 6 strategies, 16 lab checks, PWA manifest.");

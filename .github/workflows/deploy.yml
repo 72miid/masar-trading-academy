@@ -22,6 +22,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Run Supabase auth session QA
+        run: node scripts/auth-session-qa.mjs
+      - name: Run course unit lock QA
+        run: node scripts/unit-lock-qa.mjs
       - name: Run strategy simulator QA
         run: node scripts/strategy-sim-qa.mjs
       - name: Run learner progress sync QA
