@@ -53,7 +53,7 @@ assert.deepEqual(Array.from(JSON.parse(tabAAgain.localStorage.getItem("masar_v2"
 const collisionBacking={
   masar_local_owner:"learner-c",
   masar_v2:JSON.stringify({completed:[1],scores:{1:4},finalScore:null,journal:[]}),
-  masar_user_learner-c__masar_v2:JSON.stringify({completed:[2],scores:{2:5},finalScore:null,journal:[]})
+  "masar_user_learner-c__masar_v2":JSON.stringify({completed:[2],scores:{2:5},finalScore:null,journal:[]})
 };
 const tabC=createTab("learner-c",collisionBacking);
 await tabC.window.MASARProgressSync.initialize();
