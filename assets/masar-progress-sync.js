@@ -16,10 +16,17 @@ function activateUserStorage(id){
  const prefix="masar_user_"+String(id)+"__";
  const legacyOwner=nativeGet.call(storage,"masar_local_owner");
  if(legacyOwner===String(id)){
-  const legacy=[];
-  for(let i=0;i<storage.length;i++){const key=nativeKey.call(storage,i);if(isKey(key)){const value=nativeGet.call(storage,key);if(value!==null)legacy.push([key,value])}}
-  for(const [key,value] of legacy){const target=prefix+key;if(nativeGet.call(storage,target)===null)nativeSet.call(storage,target,value)}
-  for(const [key] of legacy)nativeRemove.call(storage,key);
+  const legacy={},current={},legacyKeys=[];
+  for(let i=0;i<storage.length;i++){
+   const key=nativeKey.call(storage,i);
+   if(isKey(key)){const value=nativeGet.call(storage,key);if(value!==null){legacy[key]=parseRaw(key,value);legacyKeys.push(key)}}
+   else if(typeof key==="string"&&key.startsWith(prefix)){const logical=key.slice(prefix.length);if(isKey(logical)){const value=nativeGet.call(storage,key);if(value!==null)current[logical]=parseRaw(logical,value)}}
+  }
+  if(legacyKeys.length){
+   const merged=mergeProgress(current,legacy);
+   for(const key of Object.keys(merged)){if(isKey(key))nativeSet.call(storage,prefix+key,rawValue(key,merged[key]))}
+   for(const key of legacyKeys)nativeRemove.call(storage,key);
+  }
  }
  storagePrefix=prefix;
  if(storageScoped)return;
