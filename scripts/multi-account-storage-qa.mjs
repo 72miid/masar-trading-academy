@@ -28,12 +28,13 @@ function createTab(userId,backing){
   return {window,localStorage,backing,get remote(){return remote},get writes(){return writes}};
 }
 
-const backing={masar_local_owner:"learner-a",masar_v2:JSON.stringify({completed:[1],scores:{1:5},finalScore:null,journal:[]})};
+const backing={masar_local_owner:"learner-a",masar_v2:JSON.stringify({completed:[1],scores:{1:5},finalScore:null,journal:[]}),masar_marketlab_v1:"{broken-json"} };
 const tabA=createTab("learner-a",backing);
 await tabA.window.MASARProgressSync.initialize();
 assert.deepEqual(Array.from(JSON.parse(tabA.localStorage.getItem("masar_v2")).completed),[1],"legacy progress is migrated to its original owner");
 assert.ok(Object.keys(backing).some(key=>key.startsWith("masar_user_learner-a__masar_v2")),"legacy data is stored under the original user's namespace");
 assert.equal(backing.masar_v2,undefined,"legacy shared progress key is removed only after migration");
+assert.equal(backing.masar_marketlab_v1,"{broken-json}","unreadable legacy data is preserved instead of being deleted during migration");
 assert.deepEqual(Array.from(tabA.remote.progress.masar_v2.completed),[1],"original user's legacy progress is uploaded to that user's cloud record");
 
 const tabB=createTab("learner-b",backing);
