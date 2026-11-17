@@ -95,24 +95,28 @@ const writesBeforeSwitch=writeCount;
 const oldAccountFlush=liveWindow.MASARProgressSync.flush();
 while(!resolveRead)await new Promise(resolve=>setImmediate(resolve));
 activeUser="learner-b";
-await assert.rejects(liveWindow.MASARProgressSync.initialize(),error=>error.code==="MASAR_PROGRESS_OWNER_MISMATCH","reinitialization for another account is rejected");
+remoteProgress={};remoteUpdatedAt=null;
+await liveWindow.MASARProgressSync.initialize();
 resolveRead();
-assert.equal(await oldAccountFlush,false,"a progress read started for the prior account is discarded after switching context");
-assert.equal(writeCount,writesBeforeSwitch,"an old in-flight progress request cannot write after reinitialization changes account context");
-assert.equal(liveWindow.MASARProgressSync.getStatus().ready,false,"an owner mismatch disables the previous synchronization context");
-assert.equal(await liveWindow.MASARProgressSync.flush(),false,"the old progress context cannot write after account reinitialization fails");
+assert.equal(await oldAccountFlush,false,"an in-flight progress read for the prior account is discarded after switching context");
+assert.equal(writeCount,writesBeforeSwitch,"an old progress request cannot write after account context changes");
+assert.equal(liveWindow.MASARProgressSync.getStatus().ready,true,"switching accounts initializes a separate progress context instead of blocking the second account");
+assert.equal(await liveWindow.MASARProgressSync.flush(),false,"the second account remains isolated when it has no local or cloud progress");
 
 const protectedStorage=new LiveStorage();
 protectedStorage.setItem("masar_local_owner","learner-a");
 protectedStorage.setItem("masar_v2",JSON.stringify({completed:[2],scores:{2:5},finalScore:null,journal:[]}));
 const protectedWindow={localStorage:protectedStorage,MASAR_CONFIG:{supabaseUrl:"https://example.supabase.co",supabaseAnonKey:"public-anon-key"}};
 const protectedDoc={getElementById(){return null},createElement(){return {style:{},setAttribute(){}}}};
-const ownerFetch=async url=>url.endsWith("/auth/v1/user")?{ok:true,json:async()=>({id:"learner-b"})}:Promise.reject(new Error("progress endpoints must not be called for a mismatched owner"));
+const ownerFetch=async url=>url.endsWith("/auth/v1/user")?{ok:true,json:async()=>({id:"learner-b"})}:url.includes("/rest/v1/user_progress")?{ok:true,json:async()=>[]}:Promise.reject(new Error("unexpected request"));
 protectedWindow.MASARAuthSession={async getValidSession(){return {access_token:"learner-b-token"}},async authorizedFetch(url,options={}){return ownerFetch(url,{...options,headers:new Headers({Authorization:"Bearer learner-b-token"})})}};
 vm.runInNewContext(source,{window:protectedWindow,Storage:LiveStorage,localStorage:protectedStorage,document:protectedDoc,fetch:ownerFetch,Headers,TextEncoder,JSON,Date,Set,Object,Array,String,Number,Math,RegExp,setTimeout(){return 1},clearTimeout(){} });
-await assert.rejects(protectedWindow.MASARProgressSync.initialize("learner-b"),error=>error.code==="MASAR_PROGRESS_OWNER_MISMATCH","a different account is blocked from syncing prior local data");
-assert.equal(protectedStorage.getItem("masar_local_owner"),"learner-a","owner mismatch preserves the original local owner");
-assert.deepEqual(JSON.parse(protectedStorage.getItem("masar_v2")),{completed:[2],scores:{2:5},finalScore:null,journal:[]},"owner mismatch preserves local learner progress without exposing it to the new account");
+await protectedWindow.MASARProgressSync.initialize();
+assert.equal(protectedWindow.MASARProgressSync.getStatus().ready,true,"a second account can initialize while another account owns legacy local progress");
+assert.equal(protectedStorage.getItem("masar_v2"),null,"the second account cannot read the first account's legacy progress");
+assert.equal(protectedStorage.getItem("masar_local_owner"),"learner-a","the original legacy owner marker is preserved");
+assert.ok(protectedStorage.data.masar_v2,"legacy progress remains preserved for its original owner");
+
 
 const recoveryStorage=new LiveStorage();
 recoveryStorage.setItem("masar_local_owner","learner-recover");
