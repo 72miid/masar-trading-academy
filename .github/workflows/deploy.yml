@@ -30,6 +30,8 @@ jobs:
         run: node scripts/strategy-sim-qa.mjs
       - name: Run learner progress sync QA
         run: node scripts/progress-sync-qa.mjs
+      - name: Run multi-account browser storage QA
+        run: node scripts/multi-account-storage-qa.mjs
       - name: Run static and structural QA
         run: node scripts/qa.mjs
   deploy:
