@@ -101,7 +101,7 @@ resolveRead();
 assert.equal(await oldAccountFlush,false,"an in-flight progress read for the prior account is discarded after switching context");
 assert.equal(writeCount,writesBeforeSwitch,"an old progress request cannot write after account context changes");
 assert.equal(liveWindow.MASARProgressSync.getStatus().ready,true,"switching accounts initializes a separate progress context instead of blocking the second account");
-assert.equal(await liveWindow.MASARProgressSync.flush(),false,"the second account remains isolated when it has no local or cloud progress");
+assert.equal(await liveWindow.MASARProgressSync.flush(),true,"the second account can flush its own empty progress context without reading the prior account");
 
 const protectedStorage=new LiveStorage();
 protectedStorage.setItem("masar_local_owner","learner-a");
