@@ -19,8 +19,8 @@ function activateUserStorage(id){
   const legacy={},current={},legacyKeys=[];
   for(let i=0;i<storage.length;i++){
    const key=nativeKey.call(storage,i);
-   if(isKey(key)){const value=nativeGet.call(storage,key);if(value!==null){legacy[key]=parseRaw(key,value);legacyKeys.push(key)}}
-   else if(typeof key==="string"&&key.startsWith(prefix)){const logical=key.slice(prefix.length);if(isKey(logical)){const value=nativeGet.call(storage,key);if(value!==null)current[logical]=parseRaw(logical,value)}}
+   if(isKey(key)){const value=nativeGet.call(storage,key);if(value!==null){const parsed=parseRaw(key,value);if(parsed!==undefined){legacy[key]=parsed;legacyKeys.push(key)}}}
+   else if(typeof key==="string"&&key.startsWith(prefix)){const logical=key.slice(prefix.length);if(isKey(logical)){const value=nativeGet.call(storage,key);if(value!==null){const parsed=parseRaw(logical,value);if(parsed!==undefined)current[logical]=parsed}}}
   }
   if(legacyKeys.length){
    const merged=mergeProgress(current,legacy);
