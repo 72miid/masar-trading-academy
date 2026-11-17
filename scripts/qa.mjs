@@ -34,7 +34,7 @@ for(const token of ["public.user_progress","references auth.users(id) on delete 
 assert.ok(!/create table public\.(?:subscriptions|payment_webhook_events)|payment_webhook_events/i.test(progressMigration),"progress migration must not modify payment tables");
 const account=readFileSync(new URL("../account.html",import.meta.url),"utf8");
 for(const token of ["loginBtn","logoutBtn","subscriptions?select=status","sessionStorage","supabaseAnonKey","app_metadata","masar-change-password","must_change_password","changePasswordPanel","savePasswordBtn","confirmPassword","تم تسجيل الدخول بنجاح. بيانات التقدم محفوظة في مساحة مستقلة لهذا الحساب."])assert.ok(account.includes(token),"account integration missing: "+token);
-assert.ok(account.includes('if(previous&&previous!==userId)return false')&&!account.includes('for(let i=localStorage.length-1;i>=0;i--)'),"switching accounts preserves prior local learner data instead of deleting it");
+assert.ok(!account.includes("masar_local_owner")&&!account.includes("ensureLocalOwner"),"account login does not assign one global owner to the whole browser");
 const authSession=readFileSync(new URL("../assets/masar-auth-session.js",import.meta.url),"utf8");
 new vm.Script(authSession,{filename:"masar-auth-session.js"});
 assert.ok(authSession.includes("grant_type=refresh_token")&&authSession.includes("refresh_token: current.refresh_token"),"session manager refreshes through Supabase Auth");
