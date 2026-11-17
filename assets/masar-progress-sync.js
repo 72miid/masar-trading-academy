@@ -5,10 +5,31 @@ const EXERCISE=/^masar_ex_[0-9]$/;
 const EXERCISE_UPDATED=/^masar_ex_updated_[0-9]$/;
 const storage=window.localStorage;
 const nativeSet=Storage.prototype.setItem;
+const nativeGet=Storage.prototype.getItem;
+const nativeKey=Storage.prototype.key;
 const nativeRemove=Storage.prototype.removeItem;
+let storagePrefix="",storageScoped=false;
 let userId="",base="",ready=false,busy=false,dirty=false,timer=null,statusNode=null,lastError="",generation=0,retryAttempt=0;
 const MAX_RETRIES=5,MAX_CONFLICT_RETRIES=5;
 const isKey=k=>KEYS.has(k)||EXERCISE.test(k)||EXERCISE_UPDATED.test(k);
+function activateUserStorage(id){
+ const prefix="masar_user_"+String(id)+"__";
+ const legacyOwner=nativeGet.call(storage,"masar_local_owner");
+ if(legacyOwner===String(id)){
+  const legacy=[];
+  for(let i=0;i<storage.length;i++){const key=nativeKey.call(storage,i);if(isKey(key)){const value=nativeGet.call(storage,key);if(value!==null)legacy.push([key,value])}}
+  for(const [key,value] of legacy){const target=prefix+key;if(nativeGet.call(storage,target)===null)nativeSet.call(storage,target,value)}
+  for(const [key] of legacy)nativeRemove.call(storage,key);
+ }
+ storagePrefix=prefix;
+ if(storageScoped)return;
+ const proto=Storage.prototype;
+ proto.getItem=function(key){const name=String(key);return this===storage&&storagePrefix&&isKey(name)?nativeGet.call(this,storagePrefix+name):nativeGet.call(this,key)};
+ proto.setItem=function(key,value){const name=String(key),scoped=this===storage&&storagePrefix&&isKey(name);const result=nativeSet.call(this,scoped?storagePrefix+name:key,value);if(scoped&&ready)schedule(900,true);return result};
+ proto.removeItem=function(key){const name=String(key);return this===storage&&storagePrefix&&isKey(name)?nativeRemove.call(this,storagePrefix+name):nativeRemove.call(this,key)};
+ proto.key=function(index){const key=nativeKey.call(this,index);if(this!==storage||!storagePrefix||key===null)return key;if(key.startsWith(storagePrefix))return key.slice(storagePrefix.length);return isKey(key)?null:key};
+ storageScoped=true;
+}
 const parseRaw=(key,raw)=>{if(raw===null)return undefined;if(EXERCISE.test(key))return raw;try{return JSON.parse(raw)}catch{return undefined}};
 const rawValue=(key,value)=>EXERCISE.test(key)?String(value??""):JSON.stringify(value);
 function localSnapshot(){const out={};for(let i=0;i<storage.length;i++){const key=storage.key(i);if(!isKey(key))continue;const value=parseRaw(key,storage.getItem(key));if(value!==undefined)out[key]=value}return out}
@@ -47,7 +68,7 @@ function mergeProgress(remote,local){
  }
  return out;
 }
-function writeLocal(progress){for(const key of Object.keys(progress||{})){if(!isKey(key))continue;try{nativeSet.call(storage,key,rawValue(key,progress[key]))}catch(e){setStatus("تعذر استعادة بعض بيانات التقدم محلياً؛ تحقق من مساحة المتصفح.",true)}}}
+function writeLocal(progress){for(const key of Object.keys(progress||{})){if(!isKey(key))continue;try{storage.setItem(key,rawValue(key,progress[key]))}catch(e){setStatus("تعذر استعادة بعض بيانات التقدم محلياً؛ تحقق من مساحة المتصفح.",true)}}}
 function setStatus(message,bad=false){if(!statusNode){const app=document.getElementById("academyApp");if(app){statusNode=document.createElement("div");statusNode.id="masarCloudSyncStatus";statusNode.setAttribute("role","status");statusNode.style.cssText="max-width:1100px;margin:0 auto 12px;padding:8px 12px;border:1px solid #38516b;border-radius:9px;background:#142438;color:#dbe6f2;font:13px/1.7 system-ui,Tahoma,sans-serif";app.insertBefore(statusNode,app.firstChild)}}if(statusNode){statusNode.textContent=message;statusNode.style.borderColor=bad?"#a65c5c":"#38516b";statusNode.style.color=bad?"#ffd2d2":"#dbe6f2"}}
 function httpError(action,response,detail=""){const error=new Error("تعذر "+action+" تقدم المتعلم في قاعدة البيانات ("+response.status+"). "+detail.slice(0,160));error.retryable=response.status===429||response.status>=500;return error}
 async function sessionFetch(url,options={}){try{return await window.MASARAuthSession.authorizedFetch(url,{...options,headers:{apikey:window.MASAR_CONFIG.supabaseAnonKey,...options.headers}})}catch(error){if(error.code==="MASAR_AUTH_TEMPORARY"||error.name==="TypeError")error.retryable=true;throw error}}
@@ -57,25 +78,20 @@ async function writeRemote(progress,snapshot){const body=JSON.stringify({user_id
 async function flush(){
  if(!ready)return false;if(busy){dirty=true;return false}busy=true;dirty=false;
  const run=generation,owner=userId;
- try{const currentUser=await authUser();if(run!==generation)return false;if(currentUser.id!==owner)throw ownerMismatch();let saved=false;for(let attempt=0;attempt<MAX_CONFLICT_RETRIES;attempt++){const snapshot=await readRemote();if(run!==generation)return false;const merged=mergeProgress(snapshot.progress,localSnapshot());writeLocal(merged);if(!Object.keys(merged).length||await writeRemote(merged,snapshot)){saved=true;break}if(attempt+1<MAX_CONFLICT_RETRIES)await new Promise(resolve=>setTimeout(resolve,Math.min(25*(attempt+1),100)))}if(!saved){const error=new Error("تعارضت تحديثات التقدم عدة مرات؛ بقيت بياناتك على هذا الجهاز وستُعاد المحاولة.");error.retryable=true;throw error}lastError="";retryAttempt=0;setStatus("تمت مزامنة تقدمك مع حسابك. يمكنك متابعة التعلم من جهاز آخر.");return true}
+ try{const currentUser=await authUser();if(run!==generation)return false;if(currentUser.id!==owner)return false;let saved=false;for(let attempt=0;attempt<MAX_CONFLICT_RETRIES;attempt++){const snapshot=await readRemote();if(run!==generation)return false;const merged=mergeProgress(snapshot.progress,localSnapshot());writeLocal(merged);if(!Object.keys(merged).length||await writeRemote(merged,snapshot)){saved=true;break}if(attempt+1<MAX_CONFLICT_RETRIES)await new Promise(resolve=>setTimeout(resolve,Math.min(25*(attempt+1),100)))}if(!saved){const error=new Error("تعارضت تحديثات التقدم عدة مرات؛ بقيت بياناتك على هذا الجهاز وستُعاد المحاولة.");error.retryable=true;throw error}lastError="";retryAttempt=0;setStatus("تمت مزامنة تقدمك مع حسابك. يمكنك متابعة التعلم من جهاز آخر.");return true}
  catch(e){if(run!==generation)return false;lastError=e.message||"تعذر الاتصال بالحفظ السحابي.";setStatus(lastError+" بيانات هذا الجهاز ما زالت محفوظة محلياً.",true);if(e.retryable&&retryAttempt<MAX_RETRIES){const delay=Math.min(1000*2**retryAttempt,30000);retryAttempt++;schedule(delay,false,false)}return false}
  finally{if(run===generation){busy=false;if(dirty)schedule(500,false)}}
 }
 function schedule(delay=900,resetRetries=true,markDirty=true){if(!ready)return;if(resetRetries)retryAttempt=0;if(markDirty)dirty=true;if(timer!==null)clearTimeout(timer);timer=setTimeout(()=>{timer=null;flush()},delay)}
-function ownerMismatch(){const error=new Error("بيانات هذا الجهاز مرتبطة بحساب آخر. أوقفنا المزامنة وحجبنا الأكاديمية لحماية خصوصية الحسابين.");error.code="MASAR_PROGRESS_OWNER_MISMATCH";return error}
 async function initialize(){
  const run=++generation;if(timer!==null)clearTimeout(timer);timer=null;ready=false;busy=false;dirty=false;retryAttempt=0;userId="";base=String(window.MASAR_CONFIG?.supabaseUrl||"").replace(/\/$/,"");
  if(!base||!window.MASAR_CONFIG?.supabaseAnonKey||!window.MASARAuthSession)throw new Error("إعدادات حفظ التقدم أو الجلسة غير مكتملة.");
  setStatus("جارٍ تحميل تقدمك المحفوظ من حسابك…");
  const user=await authUser();if(run!==generation)return {ok:false,superseded:true};
- const owner=storage.getItem("masar_local_owner");
- if(owner&&owner!==user.id)throw ownerMismatch();
+ activateUserStorage(user.id);
  userId=user.id;
- if(!owner)nativeSet.call(storage,"masar_local_owner",userId);
  const remote=await readRemote();if(run!==generation)return {ok:false,superseded:true};const merged=mergeProgress(remote.progress,localSnapshot());
  writeLocal(merged);ready=true;
- const proto=Storage.prototype;
- if(!proto.__masarProgressPatched){const wrapped=function(key,value){const result=nativeSet.call(this,key,value);if(this===storage&&isKey(String(key)))schedule(900,true);return result};Object.defineProperty(proto,"__masarProgressPatched",{value:true});proto.setItem=wrapped}
  setStatus(Object.keys(merged).length?"تم تحميل تقدمك المحفوظ. جارٍ تأكيد المزامنة…":"حفظ التقدم السحابي جاهز لهذا الحساب.");
  if(Object.keys(merged).length)await flush();
  return {ok:true,userId};
