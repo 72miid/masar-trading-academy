@@ -68,7 +68,7 @@ function mergeProgress(remote,local){
  }
  return out;
 }
-function writeLocal(progress){for(const key of Object.keys(progress||{})){if(!isKey(key))continue;try{storage.setItem(key,rawValue(key,progress[key]))}catch(e){setStatus("تعذر استعادة بعض بيانات التقدم محلياً؛ تحقق من مساحة المتصفح.",true)}}}
+function writeLocal(progress){for(const key of Object.keys(progress||{})){if(!isKey(key))continue;try{nativeSet.call(storage,storagePrefix+key,rawValue(key,progress[key]))}catch(e){setStatus("تعذر استعادة بعض بيانات التقدم محلياً؛ تحقق من مساحة المتصفح.",true)}}}
 function setStatus(message,bad=false){if(!statusNode){const app=document.getElementById("academyApp");if(app){statusNode=document.createElement("div");statusNode.id="masarCloudSyncStatus";statusNode.setAttribute("role","status");statusNode.style.cssText="max-width:1100px;margin:0 auto 12px;padding:8px 12px;border:1px solid #38516b;border-radius:9px;background:#142438;color:#dbe6f2;font:13px/1.7 system-ui,Tahoma,sans-serif";app.insertBefore(statusNode,app.firstChild)}}if(statusNode){statusNode.textContent=message;statusNode.style.borderColor=bad?"#a65c5c":"#38516b";statusNode.style.color=bad?"#ffd2d2":"#dbe6f2"}}
 function httpError(action,response,detail=""){const error=new Error("تعذر "+action+" تقدم المتعلم في قاعدة البيانات ("+response.status+"). "+detail.slice(0,160));error.retryable=response.status===429||response.status>=500;return error}
 async function sessionFetch(url,options={}){try{return await window.MASARAuthSession.authorizedFetch(url,{...options,headers:{apikey:window.MASAR_CONFIG.supabaseAnonKey,...options.headers}})}catch(error){if(error.code==="MASAR_AUTH_TEMPORARY"||error.name==="TypeError")error.retryable=true;throw error}}
