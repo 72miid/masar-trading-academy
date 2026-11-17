@@ -244,7 +244,7 @@ window.masarInitialize=function(data){
   try{
     session=await window.MASARAuthSession.getValidSession();
     if(window.MASARProgressSync)await window.MASARProgressSync.initialize(session.access_token);
-  }catch(syncError){if(syncError.code==="MASAR_PROGRESS_OWNER_MISMATCH")throw syncError;console.warn("MASAR progress sync unavailable",syncError);if(window.MASARProgressSync?.showError)window.MASARProgressSync.showError(syncError.message)}
+  }catch(syncError){console.warn("MASAR progress sync unavailable",syncError);if(window.MASARProgressSync?.showError)window.MASARProgressSync.showError(syncError.message)}
   if(typeof window.masarReloadProgressFromStorage==="function")window.masarReloadProgressFromStorage();
   if(typeof window.masarReloadStrategyProgress==="function")window.masarReloadStrategyProgress();
   if(typeof window.masarReloadCurriculumLabProgress==="function")window.masarReloadCurriculumLabProgress();
