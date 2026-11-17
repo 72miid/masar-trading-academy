@@ -28,7 +28,7 @@ function createTab(userId,backing){
   return {window,localStorage,backing,get remote(){return remote},get writes(){return writes}};
 }
 
-const backing={masar_local_owner:"learner-a",masar_v2:JSON.stringify({completed:[1],scores:{1:5},finalScore:null,journal:[]}),masar_marketlab_v1:"{broken-json"} };
+const backing={masar_local_owner:"learner-a",masar_v2:JSON.stringify({completed:[1],scores:{1:5},finalScore:null,journal:[]}),masar_marketlab_v1:"{broken-json" };
 const tabA=createTab("learner-a",backing);
 await tabA.window.MASARProgressSync.initialize();
 assert.deepEqual(Array.from(JSON.parse(tabA.localStorage.getItem("masar_v2")).completed),[1],"legacy progress is migrated to its original owner");
