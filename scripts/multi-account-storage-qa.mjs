@@ -50,4 +50,17 @@ const tabAAgain=createTab("learner-a",backing);
 await tabAAgain.window.MASARProgressSync.initialize();
 assert.deepEqual(Array.from(JSON.parse(tabAAgain.localStorage.getItem("masar_v2")).completed),[1],"returning to first account restores its own local progress");
 
+const collisionBacking={
+  masar_local_owner:"learner-c",
+  masar_v2:JSON.stringify({completed:[1],scores:{1:4},finalScore:null,journal:[]}),
+  masar_user_learner-c__masar_v2:JSON.stringify({completed:[2],scores:{2:5},finalScore:null,journal:[]})
+};
+const tabC=createTab("learner-c",collisionBacking);
+await tabC.window.MASARProgressSync.initialize();
+const combined=JSON.parse(tabC.localStorage.getItem("masar_v2"));
+assert.deepEqual(Array.from(combined.completed).sort(),[1,2],"migration merges legacy and already-namespaced unit completions");
+assert.equal(combined.scores[1],4,"migration retains the legacy quiz score when a namespace already exists");
+assert.equal(combined.scores[2],5,"migration retains the namespaced quiz score when a namespace already exists");
+assert.equal(collisionBacking.masar_v2,undefined,"legacy data is removed only after a successful merge into the existing namespace");
+
 console.log("MASAR multi-account storage QA passed: legacy ownership migration, per-user namespaces, same-browser account isolation, independent writes, and account return.");
