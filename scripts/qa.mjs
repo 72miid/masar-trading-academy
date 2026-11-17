@@ -105,6 +105,7 @@ assert.ok(publicIndex.includes('(unlocked?"":"disabled")'),"locked units are dis
 assert.ok(publicIndex.includes("MASARUnitAccess.isPassingScore(score,q.length,4)"),"unit completion requires four correct answers");
 assert.ok(progressSync.includes('const prefix="masar_user_"+String(id)+"__"'),"progress storage uses a unique namespace for each authenticated account");
 assert.ok(progressSync.includes("legacyOwner===String(id)"),"legacy local progress migrates only to its recorded original owner");
+assert.ok(!publicIndex.includes("MASAR_PROGRESS_OWNER_MISMATCH"),"academy no longer blocks access because another account previously used this browser");
 assert.ok(!progressSync.includes("MASAR_PROGRESS_OWNER_MISMATCH"),"a second account is isolated instead of being blocked by the previous browser owner");
 assert.ok(!account.includes("masar_local_owner")&&!account.includes("ensureLocalOwner"),"account login no longer sets a global browser owner");
 assert.ok(!existsSync(new URL("../supabase/functions/masar-content/index.ts",import.meta.url)),"protected curriculum source must not exist in public repository");
