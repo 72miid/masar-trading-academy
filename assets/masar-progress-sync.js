@@ -62,7 +62,8 @@ function mergeProgress(remote,local){
   }else if(key==="masar_paper_v1")out[key]=mergePaperTrades(out[key],value);
   else if(key==="masar_strategy_replay_v1")out[key]=mergeReplay(out[key],value);
   else if(key==="masar_marketlab_v1")out[key]=mergeMarketLab(out[key],value);
-  else if(key==="masar_practice_v1")out[key]=mergePractice(out[key],value);\n  else if(key==="masar_mt5_course_v1")out[key]=mergeMt5Course(out[key],value);
+  else if(key==="masar_practice_v1")out[key]=mergePractice(out[key],value);
+  else if(key==="masar_mt5_course_v1")out[key]=mergeMt5Course(out[key],value);
   else if(EXERCISE.test(key))out[key]=typeof value==="string"&&value.length?value:(out[key]??value);
   else out[key]=value;
  }
