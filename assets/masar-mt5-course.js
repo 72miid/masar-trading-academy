@@ -10,6 +10,7 @@ function render(){
  document.getElementById("mt5CourseIntro").textContent=course.intro;
  document.getElementById("mt5CourseProgress").textContent=state.completed.length+" / "+course.lessons.length+" مكتملة";
  document.getElementById("mt5CourseLessons").innerHTML=course.lessons.map(l=>'<article class="card unit"><div class="num">الدرس '+l.id+'</div><h3>'+esc(l.title)+'</h3><div class="lessonbody mt5-course-body">'+format(l.body)+'</div>'+renderExtras(l)+'<button class="btn '+(state.completed.includes(l.id)?"alt":"")+'" data-complete="'+l.id+'">'+(state.completed.includes(l.id)?"مكتمل ✓":"إكمال الدرس")+'</button></article>').join("");
+ document.querySelectorAll("#mt5CourseLessons .mt5-visual img").forEach(img=>img.addEventListener("error",()=>{if(img.dataset.fallback)return;img.dataset.fallback="1";img.src="https://www.metatrader5.com/c/17/1/terminal-chart.png";img.alt="واجهة منصة MetaTrader 5";}));
  document.querySelectorAll("[data-complete]").forEach(b=>b.addEventListener("click",()=>{const id=Number(b.dataset.complete);if(!state.completed.includes(id))state.completed=[...state.completed,id].sort((a,b)=>a-b);save();render()}));
  const host=document.getElementById("mt5CourseExamQuestions");
  host.innerHTML=course.exam.map((q,i)=>'<div class="quizq"><b>'+(i+1)+'. '+esc(q[0])+'</b>'+q[1].map((a,j)=>'<label class="option"><input type="radio" name="mt5q'+i+'" value="'+j+'"> '+esc(a)+'</label>').join("")+'</div>').join("");
