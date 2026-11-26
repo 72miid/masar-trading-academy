@@ -1,6 +1,6 @@
 (()=> {
 "use strict";
-const KEYS=new Set(["masar_v2","masar_paper_v1","masar_marketlab_v1","masar_strategy_replay_v1","masar_practice_v1"]);
+const KEYS=new Set(["masar_v2","masar_paper_v1","masar_marketlab_v1","masar_strategy_replay_v1","masar_practice_v1","masar_mt5_course_v1"]);
 const EXERCISE=/^masar_ex_[0-9]$/;
 const EXERCISE_UPDATED=/^masar_ex_updated_[0-9]$/;
 const storage=window.localStorage;
@@ -61,7 +61,7 @@ function mergeProgress(remote,local){
   }else if(key==="masar_paper_v1")out[key]=mergePaperTrades(out[key],value);
   else if(key==="masar_strategy_replay_v1")out[key]=mergeReplay(out[key],value);
   else if(key==="masar_marketlab_v1")out[key]=mergeMarketLab(out[key],value);
-  else if(key==="masar_practice_v1")out[key]=mergePractice(out[key],value);
+  else if(key==="masar_practice_v1")out[key]=mergePractice(out[key],value);\n  else if(key==="masar_mt5_course_v1")out[key]=mergeObject(out[key],value);
   else if(EXERCISE.test(key))out[key]=typeof value==="string"&&value.length?value:(out[key]??value);
   else out[key]=value;
  }
