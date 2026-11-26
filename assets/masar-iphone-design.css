@@ -1,0 +1,97 @@
+/* MASAR PRO responsive design system — informed by Apple HIG, adapted for web/PWA. */
+:root {
+  --masar-surface: #111d2c;
+  --masar-surface-raised: #17263a;
+  --masar-border: #34475f;
+  --masar-gold: #e4c47b;
+  --masar-gold-strong: #f3d99d;
+  --masar-text: #f4f6fa;
+  --masar-muted: #bdc7d5;
+  --masar-radius: 18px;
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+html { scroll-padding-top: 7rem; }
+body { font-size: 17px; line-height: 1.7; color: var(--masar-text); }
+h1, h2, h3, h4 { line-height: 1.25; text-wrap: balance; }
+p, li { text-wrap: pretty; }
+a { text-underline-offset: .2em; }
+button, input, select, textarea { font: inherit; }
+button, a, input[type="checkbox"], input[type="radio"], select { -webkit-tap-highlight-color: transparent; }
+button, .btn, .ghost, .nav button, .link { min-height: 44px; }
+input, select, textarea { min-height: 44px; font-size: 16px; }
+:focus-visible { outline: 3px solid var(--masar-gold-strong); outline-offset: 3px; }
+::selection { background: #e4c47b55; }
+.shell { width: min(100% - 32px, 1180px); padding-inline: 0; }
+.card, .stat, .panel { border-color: var(--masar-border); border-radius: var(--masar-radius); }
+.btn { box-shadow: 0 1px 0 #fff2 inset; transition: transform .15s ease, filter .15s ease, background-color .15s ease; }
+.btn:active, .nav button:active { transform: scale(.985); }
+.lessonbody { max-width: 72ch; font-size: 17px; line-height: 1.8; }
+.lessonbody p, .lessonbody li { font-size: inherit; line-height: inherit; }
+#mt5CourseLessons { grid-template-columns: minmax(0, 1fr); width: min(100%, 860px); margin-inline: auto; gap: 20px; }
+#mt5CourseLessons .unit { padding: clamp(20px, 3vw, 32px); }
+#mt5CourseLessons .unit h3 { font-size: clamp(22px, 2.2vw, 28px); line-height: 1.35; }
+#mt5CourseLessons .mt5-course-body,
+#mt5CourseLessons .mt5-course-body p { font-size: 17px; line-height: 1.8; }
+#mt5CourseLessons .mt5-extra { padding: 18px; }
+.mt5-practice { scroll-margin-top: 7rem; }
+.option { min-height: 44px; display: flex; align-items: center; gap: 8px; }
+.option input { flex: 0 0 auto; }
+.visual-canvas, .tablewrap, .lesson-reference { max-width: 100%; }
+img, svg, video, canvas { max-width: 100%; }
+@media (max-width: 850px) {
+  .shell { width: min(100% - 28px, 720px); }
+  .top { padding-top: env(safe-area-inset-top); }
+  .topin { align-items: center; gap: 8px; }
+  .nav { gap: 4px; max-width: 100%; overscroll-behavior-x: contain; scrollbar-width: thin; }
+  .nav button { padding: 8px 12px; }
+  .hero { padding-block: 28px 20px; }
+  .hero h1 { font-size: clamp(30px, 8vw, 42px); }
+  .sectionhead { align-items: flex-start; flex-direction: column; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  html { scroll-padding-top: 8rem; }
+  body { font-size: 17px; line-height: 1.7; overflow-wrap: anywhere; }
+  .shell { width: min(100% - 24px, 520px); }
+  .top { position: sticky; top: 0; }
+  .topin { display: flex; flex-wrap: wrap; justify-content: space-between; padding-block: 8px 6px; }
+  .brand { font-size: 17px; letter-spacing: 1.4px; }
+  .brand small { font-size: 11px; letter-spacing: .4px; }
+  .nav { order: 3; width: 100%; margin-inline: -2px; padding: 2px 2px 6px; }
+  .nav button { flex: 0 0 auto; padding-inline: 12px; white-space: nowrap; font-size: 14px; }
+  .hero { padding: 24px 0 18px; }
+  .hero h1 { font-size: clamp(29px, 8.5vw, 38px); }
+  .hero p { font-size: 16px; line-height: 1.75; }
+  .stats { gap: 9px; margin-block: 16px 24px; }
+  .stat { padding: 13px; }
+  .stat strong { font-size: 22px; }
+  .grid, .glossary, .toolgrid, .strategy-grid { grid-template-columns: minmax(0, 1fr); }
+  .grid { gap: 12px; }
+  .card, .panel { padding: 17px; border-radius: 16px; }
+  .section { margin-block: 24px; }
+  .sectionhead h2 { font-size: 22px; }
+  .lessonhead { flex-direction: column; }
+  .lessonbody { max-width: 100%; font-size: 17px; }
+  #mt5CourseLessons { gap: 14px; }
+  #mt5CourseLessons .unit { padding: 18px; }
+  #mt5CourseLessons .mt5-course-body,
+  #mt5CourseLessons .mt5-course-body p { font-size: 17px; line-height: 1.8; }
+  #mt5CourseLessons .mt5-extra { padding: 15px; }
+  #mt5CourseLessons .mt5-visual img { max-height: 60vh; }
+  .mt5-practice { padding: 15px; }
+  .actions { gap: 8px; }
+  .actions > .btn { flex: 1 1 auto; }
+  .field input, .field select, .field textarea { min-height: 48px; }
+  .wrap { width: min(100% - 24px, 520px); margin: 20px auto; padding: 0; }
+  .wrap .panel { padding: 18px; }
+  button, .btn, .link { min-height: 48px; padding: 11px 16px; }
+  .certificate { padding: 18px; border-width: 5px; }
+  .certificate h2 { font-size: 26px; }
+  footer { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
