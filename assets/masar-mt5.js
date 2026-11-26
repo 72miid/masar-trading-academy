@@ -18,7 +18,8 @@ function render(index){
  panel.querySelectorAll("[data-device]").forEach(b=>b.addEventListener("click",()=>{device=b.dataset.device;render(index)}));
 }
 const oldInit=window.masarInitialize;
-window.masarInitialize=function(data){if(oldInit)oldInit(data);guides=Array.isArray(data.mt5UnitGuides)?data.mt5UnitGuides:[];};
+window.masarInitialize=function(data){if(oldInit)oldInit(data);guides=Array.isArray(data.mt5UnitGuides)?data.mt5UnitGuides:[];window.__masarMt5Initialized=true;};
+if(!window.__masarMt5Initialized&&window.__masarPendingContent)window.masarInitialize(window.__masarPendingContent);
 const oldOpen=window.openUnit;
 if(typeof oldOpen==="function"&&!window.__masarMt5Integrated){window.openUnit=function(i){oldOpen(i);render(i)};window.__masarMt5Integrated=true;}
 const css=document.createElement("style");
