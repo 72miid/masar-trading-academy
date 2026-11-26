@@ -248,6 +248,7 @@ window.masarInitialize=function(data){
   if(typeof window.masarReloadProgressFromStorage==="function")window.masarReloadProgressFromStorage();
   if(typeof window.masarReloadStrategyProgress==="function")window.masarReloadStrategyProgress();
   if(typeof window.masarReloadCurriculumLabProgress==="function")window.masarReloadCurriculumLabProgress();
+  window.__masarPendingContent=data;
   window.masarInitialize(data);
   gate.classList.add("hide");app.classList.remove("hide");
  }catch(e){message.textContent=e.message}
