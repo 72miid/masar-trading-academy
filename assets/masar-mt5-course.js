@@ -20,6 +20,6 @@ function format(text){return String(text).split(/\n/).map(line=>{const s=line.tr
 function submit(){if(state.completed.length!==course.lessons.length){document.getElementById("mt5CourseExamFeedback").textContent="أكمل الدروس الاثني عشر أولاً.";return}let score=0;course.exam.forEach((q,i)=>{const a=document.querySelector('input[name="mt5q'+i+'"]:checked');if(a&&Number(a.value)===q[2])score++});state.finalScore=score;save();render()}
 const oldInit=window.masarInitialize;
 window.masarInitialize=function(data){if(oldInit)oldInit(data);course=data?.mt5Course||null;state=read();render();};
-document.addEventListener("DOMContentLoaded",()=>{const btn=document.getElementById("mt5CourseExamSubmit");if(btn)btn.addEventListener("click",submit)});
+const examButton=document.getElementById("mt5CourseExamSubmit");if(examButton)examButton.addEventListener("click",submit);
 const css=document.createElement("style");css.textContent=".mt5-course-body{margin:12px 0}.mt5-course-body p{margin:8px 0;color:#d4dce7}.mt5-course-body p:first-child{font-weight:600;color:var(--gold2)}#mt5CourseLessons .card{align-self:start}#mt5CourseExamSubmit:disabled{opacity:.5;cursor:not-allowed}";document.head.appendChild(css);
 })();
