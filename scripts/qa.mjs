@@ -20,6 +20,13 @@ for(const token of ['data-view="simulator"','id="simulatorView"','function openP
 assert.ok(html.includes(token),"required feature missing: "+token);
 }
 assert.ok(html.includes('src="./assets/masar-progress-sync.js"'),"learner progress sync script is loaded");
+const mt5Course=readFileSync(new URL("../assets/masar-mt5-course.js",import.meta.url),"utf8");
+new vm.Script(mt5Course,{filename:"masar-mt5-course.js"});
+assert.ok(html.includes('data-view="mt5course"')&&html.includes('id="mt5courseView"'),"MT5 course has a navigation entry and view");
+assert.ok(html.includes('src="./assets/masar-mt5-course.js"'),"MT5 course renderer is loaded");
+assert.ok(mt5Course.includes("masar_mt5_course_v1")&&mt5Course.includes("mt5CourseExamSubmit"),"MT5 course stores progress and offers a final exam");
+assert.ok(progressSync.includes("masar_mt5_course_v1"),"MT5 course progress is included in account-scoped cloud sync");
+
 assert.ok(html.includes("يُزامن مع حسابك عند تسجيل الدخول")&&!html.includes("لا توجد حالياً حسابات مستخدمين أو مزامنة سحابية"),"learner-facing storage messages match the current account sync behavior");
 assert.ok(html.includes("masar_ex_updated_"),"exercise notes store a revision timestamp for conflict resolution");
 assert.ok(html.includes("تعذر حفظ المحاولة على هذا الجهاز")&&html.includes("تعذر حفظ الملاحظة على هذا الجهاز"),"learner progress forms report local storage failures");
