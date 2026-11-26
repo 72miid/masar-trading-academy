@@ -25,7 +25,6 @@ new vm.Script(mt5Course,{filename:"masar-mt5-course.js"});
 assert.ok(html.includes('data-view="mt5course"')&&html.includes('id="mt5courseView"'),"MT5 course has a navigation entry and view");
 assert.ok(html.includes('src="./assets/masar-mt5-course.js"'),"MT5 course renderer is loaded");
 assert.ok(mt5Course.includes("masar_mt5_course_v1")&&mt5Course.includes("mt5CourseExamSubmit"),"MT5 course stores progress and offers a final exam");
-assert.ok(progressSync.includes("masar_mt5_course_v1"),"MT5 course progress is included in account-scoped cloud sync");
 
 assert.ok(html.includes("يُزامن مع حسابك عند تسجيل الدخول")&&!html.includes("لا توجد حالياً حسابات مستخدمين أو مزامنة سحابية"),"learner-facing storage messages match the current account sync behavior");
 assert.ok(html.includes("masar_ex_updated_"),"exercise notes store a revision timestamp for conflict resolution");
@@ -33,6 +32,7 @@ assert.ok(html.includes("تعذر حفظ المحاولة على هذا الجه
 assert.ok(html.includes("MASARProgressSync.initialize(session.access_token)"),"academy initializes account-scoped cloud progress");
 assert.ok(html.includes("masarReloadProgressFromStorage"),"academy reloads state after cloud restoration");
 const progressSync=readFileSync(new URL("../assets/masar-progress-sync.js",import.meta.url),"utf8");
+assert.ok(progressSync.includes("masar_mt5_course_v1"),"MT5 course progress is included in account-scoped cloud sync");
 new vm.Script(progressSync,{filename:"masar-progress-sync.js"});
 assert.ok(!/SUPABASE_SERVICE_ROLE_KEY|service_role|sb_secret_/i.test(progressSync),"browser progress sync contains no privileged Supabase secret");
 for(const token of ["user_progress","updated_at=eq.","return=representation","auth/v1/user","MASARAuthSession.authorizedFetch","activateUserStorage","masar_user_","masar_strategy_replay_v1","masar_practice_v1","masar_ex_updated_","mergePaperTrades","mergeMarketLab","mergePractice","MAX_CONFLICT_RETRIES","MAX_RETRIES"])assert.ok(progressSync.includes(token),"progress sync missing: "+token);
