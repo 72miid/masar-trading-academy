@@ -54,7 +54,7 @@ const accessCall=html.indexOf("/functions/v1/masar-access-check");
 assert.ok(indexStart>=0&&accessCall>indexStart&&html.includes("MASARAuthSession.authorizedFetch(base+\"/functions/v1/masar-access-check\""),"academy restores a valid session before checking access");
 const admin=readFileSync(new URL("../admin.html",import.meta.url),"utf8");
 for(const token of ["create_user","set_display_name","displayName","masar-admin-users","مدة الاشتراك","refreshUsers","set_access","temporary_password"])assert.ok(admin.includes(token),"admin page missing: "+token);
-assert.ok(admin.includes('invoke("create_user",{display_name:$("displayName").value.trim(),email:$("email").value.trim(),days:Number($("days").value)})'),"admin create request sends the required display_name field");
+assert.ok(admin.includes('invoke("create_user",{display_name:$("displayName").value.trim(),email:$("email").value.trim(),days:Number($("days").value),permanent})'),"admin create request sends display_name, email, duration, and permanent-access choice");
 assert.ok(admin.includes('src="./assets/masar-auth-session.js"')&&admin.includes("authSession.accept(d)")&&admin.includes("authSession.clear()"),"admin login and logout use the shared session manager");
 assert.ok(admin.includes('if(!sessionStorage.getItem("masar_auth_session"))return;try{session=await authSession.getValidSession();await verifyAdmin()'),"admin page restores and verifies an existing shared tab session");
 assert.ok(admin.indexOf('await invoke("whoami",{},d.access_token)')<admin.indexOf("session=authSession.accept(d)"),"admin login verifies the new token before replacing a prior session");
@@ -73,7 +73,7 @@ assert.ok(adminFunction.includes("if(subError){await db.auth.admin.deleteUser(da
 assert.ok(account.includes('authSession.clear();session=null;user=null;showSession()'),"account logout clears the shared tab session");
 assert.ok(admin.includes('authSession.clear();session=null;$("panel").classList.add("hide")'),"admin logout clears the shared tab session");
 assert.ok(!/SUPABASE_SERVICE_ROLE_KEY|service_role|sb_secret_/i.test(account+admin+html),"browser pages contain no server-side Supabase key markers");
-assert.ok(adminFunction.includes("const base=stillActive?Date.parse(existing.current_period_end):now"),"active renewals extend from current expiry");
+assert.ok(adminFunction.includes("const base=stillActive&&existing.current_period_end?Date.parse(existing.current_period_end):now")&&adminFunction.includes("const end=permanent?null:"),"renewals extend from the current expiry when finite and preserve permanent access without an end date");
 assert.ok(adminFunction.includes(".test(email)")&&!adminFunction.includes(String.raw`\\s`)&&!adminFunction.includes(String.raw`\\.`),"admin email validation regex uses valid single escapes");
 assert.ok(adminFunction.includes('"Cache-Control":"no-store"'),"admin responses are not cached");
 assert.ok(adminFunction.includes('"Access-Control-Allow-Origin":"https://72miid.github.io"'),"admin CORS is restricted to the academy origin");
