@@ -73,7 +73,7 @@ Deno.serve(async(req)=>{
  }
  if(body.action==="create_user"){
   const email=String(body.email||"").trim().toLowerCase(),displayName=String(body.display_name||"").trim().slice(0,80),days=Number(body.days),permanent=body.permanent===true;
-  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||displayName.length<2||(!permanent&&(!Number.isInteger(days)||days<1||days>3650)))return out({error:"invalid_input"},400);
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||displayName.length<2||(!permanent&&(!Number.isInteger(days)||days<1||days>3650)))return out({error:"invalid_input"},400);
   const pick=(chars:string)=>chars[crypto.getRandomValues(new Uint32Array(1))[0]%chars.length];
   const chars=[...Array.from({length:5},()=>pick("abcdefghijkmnopqrstuvwxyz")),...Array.from({length:5},()=>pick("ABCDEFGHJKLMNPQRSTUVWXYZ")),...Array.from({length:6},()=>pick("23456789"))];
   for(let i=chars.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[chars[i],chars[j]]=[chars[j],chars[i]];}
