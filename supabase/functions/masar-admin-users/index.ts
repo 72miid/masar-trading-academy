@@ -26,21 +26,21 @@ Deno.serve(async(req)=>{
   return out({users});
  }
  if(body.action==="set_access"){
-  const userId=String(body.user_id||""),days=Number(body.days);
-  if(!/^[0-9a-f-]{36}$/i.test(userId)||!Number.isInteger(days)||days<0||days>3650)return out({error:"invalid_input"},400);
+  const userId=String(body.user_id||""),days=Number(body.days),permanent=body.permanent===true;
+  if(!/^[0-9a-f-]{36}$/i.test(userId)||(!permanent&&(!Number.isInteger(days)||days<0||days>3650)))return out({error:"invalid_input"},400);
   const {data:userData,error:userError}=await db.auth.admin.getUserById(userId);
   if(userError||!userData.user)return out({error:"user_not_found"},404);
-  if(days===0){const {error}=await db.from("subscriptions").update({status:"canceled",current_period_end:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("user_id",userId).eq("provider","manual");if(error)return out({error:"update_failed"},500);return out({updated:true,active:false});}
+  if(!permanent&&days===0){const {error}=await db.from("subscriptions").update({status:"canceled",current_period_end:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("user_id",userId).eq("provider","manual");if(error)return out({error:"update_failed"},500);return out({updated:true,active:false});}
   const now=Date.now();
   const {data:existing}=await db.from("subscriptions").select("status,current_period_start,current_period_end").eq("user_id",userId).eq("provider","manual").maybeSingle();
-  const stillActive=existing?.status==="active"&&existing.current_period_end&&Date.parse(existing.current_period_end)>now;
+  const stillActive=existing?.status==="active"&&(!existing.current_period_end||Date.parse(existing.current_period_end)>now);
   const start=stillActive&&existing.current_period_start?existing.current_period_start:new Date(now).toISOString();
-  const base=stillActive?Date.parse(existing.current_period_end):now;
-  const end=new Date(base+days*86400000).toISOString();
+  const base=stillActive&&existing.current_period_end?Date.parse(existing.current_period_end):now;
+  const end=permanent?null:new Date(base+days*86400000).toISOString();
   const sub={user_id:userId,provider:"manual",provider_subscription_id:"manual:"+userId,status:"active",current_period_start:start,current_period_end:end,cancel_at_period_end:false,updated_at:new Date().toISOString()};
   const {error}=await db.from("subscriptions").upsert(sub,{onConflict:"provider_subscription_id"});
   if(error)return out({error:"update_failed"},500);
-  return out({updated:true,active:true,current_period_end:end});
+  return out({updated:true,active:true,permanent,current_period_end:end});
  }
  if(body.action==="reset_password"){
   const userId=String(body.user_id||"");
@@ -72,19 +72,19 @@ Deno.serve(async(req)=>{
   return out({updated:true,user_id:userId,display_name:displayName});
  }
  if(body.action==="create_user"){
-  const email=String(body.email||"").trim().toLowerCase(),displayName=String(body.display_name||"").trim().slice(0,80),days=Number(body.days);
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||displayName.length<2||!Number.isInteger(days)||days<1||days>3650)return out({error:"invalid_input"},400);
+  const email=String(body.email||"").trim().toLowerCase(),displayName=String(body.display_name||"").trim().slice(0,80),days=Number(body.days),permanent=body.permanent===true;
+  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||displayName.length<2||(!permanent&&(!Number.isInteger(days)||days<1||days>3650)))return out({error:"invalid_input"},400);
   const pick=(chars:string)=>chars[crypto.getRandomValues(new Uint32Array(1))[0]%chars.length];
   const chars=[...Array.from({length:5},()=>pick("abcdefghijkmnopqrstuvwxyz")),...Array.from({length:5},()=>pick("ABCDEFGHJKLMNPQRSTUVWXYZ")),...Array.from({length:6},()=>pick("23456789"))];
   for(let i=chars.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[chars[i],chars[j]]=[chars[j],chars[i]];}
   const tempPassword=chars.join("");
   const {data,error}=await db.auth.admin.createUser({email,password:tempPassword,email_confirm:true,user_metadata:{display_name:displayName},app_metadata:{must_change_password:true}});
   if(error||!data.user)return out({error:error?.message||"user_creation_failed"},400);
-  const end=new Date(Date.now()+days*86400000).toISOString();
-  const sub={user_id:data.user.id,provider:"manual",provider_subscription_id:"manual:"+data.user.id,status:"active",current_period_start:new Date().toISOString(),current_period_end:end,cancel_at_period_end:false,updated_at:new Date().toISOString()};
+  const start=new Date().toISOString(),end=permanent?null:new Date(Date.now()+days*86400000).toISOString();
+  const sub={user_id:data.user.id,provider:"manual",provider_subscription_id:"manual:"+data.user.id,status:"active",current_period_start:start,current_period_end:end,cancel_at_period_end:false,updated_at:start};
   const {error:subError}=await db.from("subscriptions").upsert(sub,{onConflict:"provider_subscription_id"});
   if(subError){await db.auth.admin.deleteUser(data.user.id);return out({error:"subscription_creation_failed"},500)}
-  return out({created:true,user:{id:data.user.id,email:data.user.email},temporary_password:tempPassword,must_change_password:true,current_period_end:end});
+  return out({created:true,user:{id:data.user.id,email:data.user.email},temporary_password:tempPassword,must_change_password:true,current_period_end:end,permanent});
  }
  return out({error:"unknown_action"},400);
 });
