@@ -17,7 +17,7 @@ Deno.serve(async(req)=>{
  if(admin)return out({allowed:true,role:"admin"});
  const {data:sub,error:subError}=await db.from("subscriptions").select("status,current_period_end").eq("user_id",user.id).eq("provider","manual").order("created_at",{ascending:false}).limit(1).maybeSingle();
  if(subError){console.error("subscription_check_failed",subError.code||"unknown");return out({error:"subscription_check_failed"},500)}
- const active=!!sub&&sub.status==="active"&&!!sub.current_period_end&&Date.parse(sub.current_period_end)>Date.now();
+ const active=!!sub&&sub.status==="active"&&(!sub.current_period_end||Date.parse(sub.current_period_end)>Date.now());
  if(!active)return out({error:"subscription_inactive"},403);
- return out({allowed:true,role:"subscriber",current_period_end:sub.current_period_end});
+ return out({allowed:true,role:"subscriber",current_period_end:sub.current_period_end,permanent:!sub.current_period_end});
 });
