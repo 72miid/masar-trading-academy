@@ -1,36 +1,36 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-const cors={"Access-Control-Allow-Origin":"https://72miid.github.io","Access-Control-Allow-Headers":"authorization, apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"};
-const out=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,"Content-Type":"application/json","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
+const allowedOrigins=new Set(["https://72miid.github.io","https://masar-trading-academy.vercel.app"]);const corsFor=(req:Request)=>{const origin=req.headers.get("Origin")||"";return {"Access-Control-Allow-Origin":allowedOrigins.has(origin)?origin:"https://72miid.github.io","Access-Control-Allow-Headers":"authorization, apikey, content-type, x-client-info","Access-Control-Allow-Methods":"POST, OPTIONS","Vary":"Origin"}};
+const out=(req:Request,body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...corsFor(req),"Content-Type":"application/json","Cache-Control":"no-store","X-Content-Type-Options":"nosniff"}});
 Deno.serve(async(req)=>{
- if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
- if(req.method!=="POST")return out({error:"method_not_allowed"},405);
+ if(req.method==="OPTIONS")return new Response("ok",{headers:corsFor(req)});
+ if(req.method!=="POST")return out(req,{error:"method_not_allowed"},405);
  const url=Deno.env.get("SUPABASE_URL"),anon=Deno.env.get("SUPABASE_ANON_KEY"),key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
- if(!url||!anon||!key)return out({error:"server_not_configured"},503);
+ if(!url||!anon||!key)return out(req,{error:"server_not_configured"},503);
  const auth=req.headers.get("Authorization")||"",token=auth.startsWith("Bearer ")?auth.slice(7):"";
- if(!token)return out({error:"unauthorized"},401);
+ if(!token)return out(req,{error:"unauthorized"},401);
  const callerClient=createClient(url,anon,{global:{headers:{Authorization:"Bearer "+token}},auth:{persistSession:false}});
  const {data:{user:caller},error:authError}=await callerClient.auth.getUser(token);
- if(authError||!caller)return out({error:"unauthorized"},401);
+ if(authError||!caller)return out(req,{error:"unauthorized"},401);
  const {data:admin,error:adminCheckError}=await callerClient.from("admin_users").select("user_id").eq("user_id",caller.id).maybeSingle();
- if(adminCheckError){console.error("admin_membership_check_failed",adminCheckError.code||"unknown");return out({error:"admin_check_failed",code:adminCheckError.code||"unknown"},500)}
- if(!admin)return out({error:"admin_only"},403);
+ if(adminCheckError){console.error("admin_membership_check_failed",adminCheckError.code||"unknown");return out(req,{error:"admin_check_failed",code:adminCheckError.code||"unknown"},500)}
+ if(!admin)return out(req,{error:"admin_only"},403);
  const db=createClient(url,key,{auth:{persistSession:false}});
- let body:any;try{body=await req.json()}catch{return out({error:"invalid_json"},400)}
- if(body.action==="whoami")return out({admin:true});
+ let body:any;try{body=await req.json()}catch{return out(req,{error:"invalid_json"},400)}
+ if(body.action==="whoami")return out(req,{admin:true});
  if(body.action==="list_users"){
   const {data:rows,error}=await db.from("subscriptions").select("user_id,status,current_period_start,current_period_end").eq("provider","manual").order("created_at",{ascending:false}).limit(200);
-  if(error){console.error("admin_list_query_failed",error.code||"unknown",error.message||"");return out({error:"list_failed",code:error.code||"unknown",message:error.message||"Database query failed"},500);}
+  if(error){console.error("admin_list_query_failed",error.code||"unknown",error.message||"");return out(req,{error:"list_failed",code:error.code||"unknown",message:error.message||"Database query failed"},500);}
   const users=[],profileNames=new Map<string,string>();
-  if((rows||[]).length){const {data:profiles,error:profileError}=await db.from("profiles").select("id,display_name").in("id",rows.map((row:any)=>row.user_id));if(profileError){console.error("admin_profile_list_failed",profileError.code||"unknown");return out({error:"profile_list_failed"},500)}for(const profile of profiles||[])profileNames.set(profile.id,profile.display_name||"");}
+  if((rows||[]).length){const {data:profiles,error:profileError}=await db.from("profiles").select("id,display_name").in("id",rows.map((row:any)=>row.user_id));if(profileError){console.error("admin_profile_list_failed",profileError.code||"unknown");return out(req,{error:"profile_list_failed"},500)}for(const profile of profiles||[])profileNames.set(profile.id,profile.display_name||"");}
   for(const row of rows||[]){const {data,error}=await db.auth.admin.getUserById(row.user_id);if(!error&&data.user)users.push({id:data.user.id,email:data.user.email,display_name:profileNames.get(data.user.id)||"",status:row.status,current_period_start:row.current_period_start,current_period_end:row.current_period_end});}
-  return out({users});
+  return out(req,{users});
  }
  if(body.action==="set_access"){
   const userId=String(body.user_id||""),days=Number(body.days),permanent=body.permanent===true;
-  if(!/^[0-9a-f-]{36}$/i.test(userId)||(!permanent&&(!Number.isInteger(days)||days<0||days>3650)))return out({error:"invalid_input"},400);
+  if(!/^[0-9a-f-]{36}$/i.test(userId)||(!permanent&&(!Number.isInteger(days)||days<0||days>3650)))return out(req,{error:"invalid_input"},400);
   const {data:userData,error:userError}=await db.auth.admin.getUserById(userId);
-  if(userError||!userData.user)return out({error:"user_not_found"},404);
-  if(!permanent&&days===0){const {error}=await db.from("subscriptions").update({status:"canceled",current_period_end:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("user_id",userId).eq("provider","manual");if(error)return out({error:"update_failed"},500);return out({updated:true,active:false});}
+  if(userError||!userData.user)return out(req,{error:"user_not_found"},404);
+  if(!permanent&&days===0){const {error}=await db.from("subscriptions").update({status:"canceled",current_period_end:new Date().toISOString(),updated_at:new Date().toISOString()}).eq("user_id",userId).eq("provider","manual");if(error)return out(req,{error:"update_failed"},500);return out(req,{updated:true,active:false});}
   const now=Date.now();
   const {data:existing}=await db.from("subscriptions").select("status,current_period_start,current_period_end").eq("user_id",userId).eq("provider","manual").maybeSingle();
   const stillActive=existing?.status==="active"&&(!existing.current_period_end||Date.parse(existing.current_period_end)>now);
@@ -39,52 +39,52 @@ Deno.serve(async(req)=>{
   const end=permanent?null:new Date(base+days*86400000).toISOString();
   const sub={user_id:userId,provider:"manual",provider_subscription_id:"manual:"+userId,status:"active",current_period_start:start,current_period_end:end,cancel_at_period_end:false,updated_at:new Date().toISOString()};
   const {error}=await db.from("subscriptions").upsert(sub,{onConflict:"provider_subscription_id"});
-  if(error)return out({error:"update_failed"},500);
-  return out({updated:true,active:true,permanent,current_period_end:end});
+  if(error)return out(req,{error:"update_failed"},500);
+  return out(req,{updated:true,active:true,permanent,current_period_end:end});
  }
  if(body.action==="reset_password"){
   const userId=String(body.user_id||"");
-  if(!/^[0-9a-f-]{36}$/i.test(userId))return out({error:"invalid_input"},400);
+  if(!/^[0-9a-f-]{36}$/i.test(userId))return out(req,{error:"invalid_input"},400);
   const {data:userData,error:userError}=await db.auth.admin.getUserById(userId);
-  if(userError||!userData.user)return out({error:"user_not_found"},404);
+  if(userError||!userData.user)return out(req,{error:"user_not_found"},404);
   const {data:adminTarget,error:adminTargetError}=await db.from("admin_users").select("user_id").eq("user_id",userId).maybeSingle();
-  if(adminTargetError)return out({error:"target_check_failed"},500);
-  if(adminTarget)return out({error:"cannot_reset_admin"},403);
+  if(adminTargetError)return out(req,{error:"target_check_failed"},500);
+  if(adminTarget)return out(req,{error:"cannot_reset_admin"},403);
   const {data:subscription,error:subscriptionError}=await db.from("subscriptions").select("user_id").eq("user_id",userId).eq("provider","manual").maybeSingle();
-  if(subscriptionError)return out({error:"subscription_check_failed"},500);
-  if(!subscription)return out({error:"manual_subscriber_only"},403);
+  if(subscriptionError)return out(req,{error:"subscription_check_failed"},500);
+  if(!subscription)return out(req,{error:"manual_subscriber_only"},403);
   const pick=(chars:string)=>chars[crypto.getRandomValues(new Uint32Array(1))[0]%chars.length];
   const chars=[...Array.from({length:5},()=>pick("abcdefghijkmnopqrstuvwxyz")),...Array.from({length:5},()=>pick("ABCDEFGHJKLMNPQRSTUVWXYZ")),...Array.from({length:6},()=>pick("23456789"))];
   for(let i=chars.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[chars[i],chars[j]]=[chars[j],chars[i]];}
   const tempPassword=chars.join("");
   const appMetadata={...(userData.user.app_metadata||{}),must_change_password:true};
   const {data:updated,error:updateError}=await db.auth.admin.updateUserById(userId,{password:tempPassword,app_metadata:appMetadata});
-  if(updateError||!updated.user){console.error("admin_password_reset_failed",updateError?.message||"unknown");return out({error:"password_reset_failed"},400);}
-  return out({reset:true,user:{id:updated.user.id,email:updated.user.email},temporary_password:tempPassword,must_change_password:true});
+  if(updateError||!updated.user){console.error("admin_password_reset_failed",updateError?.message||"unknown");return out(req,{error:"password_reset_failed"},400);}
+  return out(req,{reset:true,user:{id:updated.user.id,email:updated.user.email},temporary_password:tempPassword,must_change_password:true});
  }
  if(body.action==="set_display_name"){
   const userId=String(body.user_id||""),displayName=String(body.display_name||"").trim().slice(0,80);
-  if(!/^[0-9a-f-]{36}$/i.test(userId)||displayName.length<2)return out({error:"invalid_input"},400);
+  if(!/^[0-9a-f-]{36}$/i.test(userId)||displayName.length<2)return out(req,{error:"invalid_input"},400);
   const {data:userData,error:userError}=await db.auth.admin.getUserById(userId);
-  if(userError||!userData.user)return out({error:"user_not_found"},404);
+  if(userError||!userData.user)return out(req,{error:"user_not_found"},404);
   const {error}=await db.from("profiles").update({display_name:displayName,updated_at:new Date().toISOString()}).eq("id",userId);
-  if(error){console.error("admin_profile_update_failed",error.code||"unknown");return out({error:"profile_update_failed"},500)}
-  return out({updated:true,user_id:userId,display_name:displayName});
+  if(error){console.error("admin_profile_update_failed",error.code||"unknown");return out(req,{error:"profile_update_failed"},500)}
+  return out(req,{updated:true,user_id:userId,display_name:displayName});
  }
  if(body.action==="create_user"){
   const email=String(body.email||"").trim().toLowerCase(),displayName=String(body.display_name||"").trim().slice(0,80),days=Number(body.days),permanent=body.permanent===true;
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||displayName.length<2||(!permanent&&(!Number.isInteger(days)||days<1||days>3650)))return out({error:"invalid_input"},400);
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||displayName.length<2||(!permanent&&(!Number.isInteger(days)||days<1||days>3650)))return out(req,{error:"invalid_input"},400);
   const pick=(chars:string)=>chars[crypto.getRandomValues(new Uint32Array(1))[0]%chars.length];
   const chars=[...Array.from({length:5},()=>pick("abcdefghijkmnopqrstuvwxyz")),...Array.from({length:5},()=>pick("ABCDEFGHJKLMNPQRSTUVWXYZ")),...Array.from({length:6},()=>pick("23456789"))];
   for(let i=chars.length-1;i>0;i--){const j=crypto.getRandomValues(new Uint32Array(1))[0]%(i+1);[chars[i],chars[j]]=[chars[j],chars[i]];}
   const tempPassword=chars.join("");
   const {data,error}=await db.auth.admin.createUser({email,password:tempPassword,email_confirm:true,user_metadata:{display_name:displayName},app_metadata:{must_change_password:true}});
-  if(error||!data.user)return out({error:error?.message||"user_creation_failed"},400);
+  if(error||!data.user)return out(req,{error:error?.message||"user_creation_failed"},400);
   const start=new Date().toISOString(),end=permanent?null:new Date(Date.now()+days*86400000).toISOString();
   const sub={user_id:data.user.id,provider:"manual",provider_subscription_id:"manual:"+data.user.id,status:"active",current_period_start:start,current_period_end:end,cancel_at_period_end:false,updated_at:start};
   const {error:subError}=await db.from("subscriptions").upsert(sub,{onConflict:"provider_subscription_id"});
-  if(subError){await db.auth.admin.deleteUser(data.user.id);return out({error:"subscription_creation_failed"},500)}
-  return out({created:true,user:{id:data.user.id,email:data.user.email},temporary_password:tempPassword,must_change_password:true,current_period_end:end,permanent});
+  if(subError){await db.auth.admin.deleteUser(data.user.id);return out(req,{error:"subscription_creation_failed"},500)}
+  return out(req,{created:true,user:{id:data.user.id,email:data.user.email},temporary_password:tempPassword,must_change_password:true,current_period_end:end,permanent});
  }
- return out({error:"unknown_action"},400);
+ return out(req,{error:"unknown_action"},400);
 });
